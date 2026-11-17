@@ -5,8 +5,12 @@ require('dotenv').config();
 
 const express = require('express');
 const cors    = require('cors');
+const path    = require('path');
 
 const app = express();
+
+// ── Serve static front-end assets ─────────────────────────────────────────────
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
 // Allow only your Vercel front-end (and localhost for development).
@@ -40,8 +44,13 @@ app.use('/api/admin',   require('./routes/admin'));
 // ── Health check (Render pings this to know the service is alive) ─────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-// ── 404 handler ───────────────────────────────────────────────────────────────
-app.use((_req, res) => res.status(404).json({ error: 'Route not found.' }));
+// ── Fallback handler ─────────────────────────────────────────────────────────
+app.use((req, res) => {
+  if (req.path.startsWith('/api')) {
+    return res.status(404).json({ error: 'Route not found.' });
+  }
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // ── Global error handler ──────────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars
