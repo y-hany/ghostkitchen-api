@@ -381,6 +381,7 @@ function gate(show){
     document.body.appendChild(g);
   }
   g.hidden=!show;
+  g.style.display = show ? 'flex' : 'none';
   document.body.classList.toggle('locked',show);
 }
 

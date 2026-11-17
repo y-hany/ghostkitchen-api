@@ -773,6 +773,14 @@ button.chip:hover:not(:disabled) {
   .stat b { font-size: 24px; }
 }
 
+[hidden] {
+  display: none !important;
+}
+
+#gate[hidden] {
+  display: none !important;
+}
+
 /* ── Auth Gate Modal ── */
 #gate {
   position: fixed;
