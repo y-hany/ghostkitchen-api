@@ -1,5 +1,9 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Chef Dashboard · GhostKitchen</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="styles.css"></head><body><nav><a class="brand" href="kitchens.html">🍳 GhostKitchen</a><div class="links"><a href="login.html"><i>👤</i><span>Profile</span></a><a href="kitchens.html"><i>🏪</i><span>Kitchens</span></a><a href="host.html" data-roles="host"><i>📋</i><span>Host</span></a><a href="chef.html" data-roles="chef"><i>🧑‍🍳</i><span>Chef</span></a><a href="event.html"><i>🍽️</i><span>Events</span></a><a href="tickets.html" data-roles="guest attendee chef"><i>🎟️</i><span>Tickets</span></a><a href="admin.html" data-roles="admin"><i>🛡️</i><span>Admin</span></a></div><a class="role-chip" href="login.html" id="roleChip">Guest</a></nav>
-<main data-page="chef" data-roles="chef"><h1>Chef dashboard</h1><p class="sub">Track your kitchen bookings and publish pop-up events.</p><div id="chefStats"></div><h2>My bookings</h2><div id="chefBookings"></div>
-<h2>My events</h2><div id="chefEvents"></div>
-<h2>Publish a pop-up event</h2><p class="sub" id="evNote" hidden>Request a kitchen slot first, then publish your event here. <a href="kitchens.html" data-go="kitchens">Browse kitchens</a></p>
-<form class="card" novalidate data-form="event"><fieldset id="evFields"><label>booking_id</label><select name="booking_id" id="evBooking"></select><label>title</label><input name="title" type="text" value="" placeholder="e.g. Koshary Reimagined"><label>menu_description</label><textarea name="menu_description" rows="3" placeholder="What will guests eat?"></textarea><div class="grid2"><div><label>ticket_price (EGP per seat)</label><input name="ticket_price" type="number" value="450" inputmode="numeric" min="1"></div><div><label>capacity</label><input name="capacity" type="number" value="24" inputmode="numeric" min="1"></div></div><div class="msg err" role="alert" hidden></div><button type="submit">Publish event</button></fieldset></form></main><script src="app.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>GhostKitchen — Chef Dashboard</title>
+  <script>location.replace('index.html#chef');</script>
+</head>
+<body></body>
+</html>
