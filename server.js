@@ -13,18 +13,10 @@ const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// Allow only your Vercel front-end (and localhost for development).
-// Set FRONTEND_URL in .env.  Multiple origins can be comma-separated.
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5500')
-  .split(',')
-  .map(s => s.trim());
-
+// Allow requests from all origins (Vercel deployment, localhost, phone, etc.)
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (Postman, curl) or file:/// (origin === 'null') during dev
-    if (!origin || allowedOrigins.includes(origin) || origin === 'null') return callback(null, true);
-    callback(new Error(`Origin ${origin} is not allowed by CORS`));
-  },
+  origin: true,
+  credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -55,8 +47,8 @@ app.use((req, res) => {
 // ── Global error handler ──────────────────────────────────────────────────────
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
-  console.error('Unhandled error:', err.message);
-  res.status(500).json({ error: 'An unexpected error occurred.' });
+  console.error('Unhandled error:', err);
+  res.status(err.status || 500).json({ error: err.message || 'An unexpected error occurred.' });
 });
 
 // ── Start server (locally) or export (for Vercel) ───────────────────────────
