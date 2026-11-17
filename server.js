@@ -59,9 +59,13 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: 'An unexpected error occurred.' });
 });
 
-// ── Start server ──────────────────────────────────────────────────────────────
-const PORT = parseInt(process.env.PORT, 10) || 3000;
-app.listen(PORT, () => {
-  console.log(`GhostKitchen API listening on port ${PORT}`);
-  console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
-});
+// ── Start server (locally) or export (for Vercel) ───────────────────────────
+if (process.env.VERCEL !== '1') {
+  const PORT = parseInt(process.env.PORT, 10) || 3000;
+  app.listen(PORT, () => {
+    console.log(`GhostKitchen API listening on port ${PORT}`);
+    console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
+  });
+}
+
+module.exports = app;
