@@ -11,7 +11,9 @@ var DEMO_USERS = {
   admin:    { name: 'Platform Admin',   email: 'admin@demo.eg',    password: 'password123', role: 'admin' }
 };
 
-var DISTRICTS = ['All', 'Dokki', 'Zamalek', 'Maadi', 'Heliopolis', 'Garden City', 'New Cairo'];
+var DISTRICTS = ['All', 'Dokki', 'Zamalek', 'Maadi', 'Heliopolis', 'Garden City', 'New Cairo', 'Sheikh Zayed'];
+var SETUPS = ['All Setups', 'Hot Cooking Line', 'Bakery Deck', 'Supper Club (Kitchen+Dining)', 'Cold Prep'];
+var RATES = ['All Rates', '< 300 EGP', '300–350 EGP', '350+ EGP'];
 var EQUIP = ['Walk-in chiller', 'Convection ovens', 'Gas range', 'Induction hobs'];
 
 var KITCHEN_PHOTOS = [
@@ -31,6 +33,7 @@ var EVENT_PHOTOS = [
 
 var S, flash = null;
 var $ = (s, r) => [].slice.call((r || document).querySelectorAll(s)), $1 = (s, r) => (r || document).querySelector(s);
+var $$ = s => [].slice.call(document.querySelectorAll(s));
 var fmt = n => Number(n || 0).toLocaleString('en-US') + ' EGP';
 var esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 var by = (a, id) => a.filter(x => x.id === id)[0];
@@ -43,8 +46,7 @@ var ICONS = {
   shield: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>',
   ticket: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>',
   sun: '<svg class="theme-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>',
-  moon: '<svg class="theme-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
-  culinaryEvent: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'
+  moon: '<svg class="theme-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
 };
 
 // ── THEME MANAGER ───────────────────────────────────────────────────────────
@@ -100,6 +102,8 @@ function initSession() {
     session: saved && saved.session ? saved.session : null,
     filters: [],
     district: 'All',
+    setup: 'All Setups',
+    maxRate: 'All Rates',
     searchQuery: '',
     kitchens: [],
     slots: [],
@@ -129,7 +133,7 @@ function toast(m){
   t.textContent = m;
   t.className = 'show';
   clearTimeout(t._h);
-  t._h = setTimeout(() => t.className = '', 3000);
+  t._h = setTimeout(() => t.className = '', 3200);
 }
 
 function B(st, txt){
@@ -157,12 +161,52 @@ function hashPhoto(str, list) {
   return list[Math.abs(h) % list.length];
 }
 
+// ── SKELETON LOADERS ────────────────────────────────────────────────────────
+function skeletonCards(n) {
+  var h = '';
+  for (var i = 0; i < (n || 3); i++) {
+    h += `
+      <div class="card skeleton-card">
+        <div class="skeleton skeleton-img"></div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line sm"></div>
+      </div>
+    `;
+  }
+  return h;
+}
+
+// ── MODAL SYSTEM ────────────────────────────────────────────────────────────
+function openModal(title, contentHtml) {
+  var m = $1('#modalContainer');
+  m.innerHTML = `
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3 class="modal-title">${esc(title)}</h3>
+        <button class="modal-close" data-act="modal-close" aria-label="Close dialog">✕</button>
+      </div>
+      <div>${contentHtml}</div>
+    </div>
+  `;
+  m.hidden = false;
+  document.body.classList.add('locked');
+}
+
+function closeModal() {
+  var m = $1('#modalContainer');
+  if (m) {
+    m.hidden = true;
+    m.innerHTML = '';
+  }
+  document.body.classList.remove('locked');
+}
+
 // ── DYNAMIC RBAC NAVIGATION ─────────────────────────────────────────────────
 function updateNav() {
   var r = role();
   var navLinks = $1('#navLinks');
   var userAction = $1('#navUserAction');
-  var cur = (location.hash || '#events').slice(1).split('-')[0];
+  var cur = getActiveRoute();
 
   var linksHtml = '';
   if (r === 'guest') {
@@ -225,57 +269,19 @@ function updateNav() {
 
   navLinks.innerHTML = linksHtml;
 
-  // Update Reviewer drawer active button
   $$('.demo-role-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.role === r);
   });
 }
 
-function $$ (s) { return [].slice.call(document.querySelectorAll(s)); }
-
-// ── SKELETON LOADERS ────────────────────────────────────────────────────────
-function skeletonCards(n) {
-  var h = '';
-  for (var i = 0; i < (n || 3); i++) {
-    h += `
-      <div class="card skeleton-card">
-        <div class="skeleton skeleton-img"></div>
-        <div class="skeleton skeleton-line"></div>
-        <div class="skeleton skeleton-line sm"></div>
-      </div>
-    `;
-  }
-  return h;
+function getActiveRoute() {
+  var h = (location.hash || '').slice(1).toLowerCase();
+  var p = location.pathname.replace(/^\//, '').toLowerCase();
+  var target = h || p || 'events';
+  return target.split('-')[0];
 }
 
-// ── MODAL SYSTEM ────────────────────────────────────────────────────────────
-function openModal(title, formHtml) {
-  var m = $1('#modalContainer');
-  m.innerHTML = `
-    <div class="modal-box" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <h3 class="modal-title">${esc(title)}</h3>
-        <button class="modal-close" data-act="modal-close" aria-label="Close dialog">✕</button>
-      </div>
-      <div>${formHtml}</div>
-    </div>
-  `;
-  m.hidden = false;
-  document.body.classList.add('locked');
-}
-
-function closeModal() {
-  var m = $1('#modalContainer');
-  if (m) {
-    m.hidden = true;
-    m.innerHTML = '';
-  }
-  document.body.classList.remove('locked');
-}
-
-// ── VIEW RENDERERS ──────────────────────────────────────────────────────────
-
-// 1. SUPPER CLUBS & POP-UP EVENTS VIEW (Default Public Landing)
+// ── VIEW 1: SUPPER CLUBS & POP-UP DINING (Default Diner Landing) ────────────
 async function renderEventsView() {
   var view = $1('#appView');
   view.innerHTML = `
@@ -284,7 +290,7 @@ async function renderEventsView() {
       <p>Exclusive tasting menus, guest chef residencies, and intimate supper clubs hosted inside licensed commercial kitchens across Cairo.</p>
     </div>
 
-    <!-- Hospitality Credibility Signals -->
+    <!-- Hospitality Trust Signals -->
     <div class="trust-bar">
       <div class="trust-item">
         <div class="trust-icon">${ICONS.shield}</div>
@@ -304,7 +310,7 @@ async function renderEventsView() {
         <div class="trust-icon">${ICONS.ticket}</div>
         <div>
           <div class="trust-title">Intimate Seating</div>
-          <div class="trust-sub">Limited seating with secret locations revealed upon booking</div>
+          <div class="trust-sub">Secret locations revealed upon confirmed booking</div>
         </div>
       </div>
     </div>
@@ -385,34 +391,67 @@ async function renderEventsView() {
   }
 }
 
-// 2. COMMERCIAL KITCHENS VIEW
+// ── VIEW 2: COMMERCIAL KITCHENS MARKETPLACE ─────────────────────────────────
 async function renderKitchensView() {
   var view = $1('#appView');
   view.innerHTML = `
     <div class="dashboard-header">
       <div class="dashboard-title-area">
-        <h1>Commercial Kitchen Spaces</h1>
-        <p class="sub">Verified licensed commercial kitchens with off-peak shift availability across Cairo.</p>
+        <h1>Cairo Commercial Kitchen Spaces</h1>
+        <p class="sub">Verified licensed commissary kitchens, bakery prep decks, and supper club venues available for hourly shift rental.</p>
       </div>
       ${role() === 'host' ? '<button class="btn-primary-action" data-act="modal-kitchen">+ List a Kitchen</button>' : ''}
     </div>
 
+    <!-- Educational "How Commercial Kitchen Rental Works" Section -->
+    <section class="how-it-works">
+      <div class="hiw-header">
+        <span class="hiw-badge">How It Works for Chefs & Food Entrepreneurs</span>
+        <h2>Flexible Commercial Shifts with Zero Long-term Lease</h2>
+        <p class="muted">Rent licensed commercial kitchen infrastructure by the hour for prep, production, or live pop-up dinner services.</p>
+      </div>
+      <div class="hiw-grid">
+        <div class="hiw-step">
+          <div class="hiw-num">01</div>
+          <h3>MOH Health Licensed</h3>
+          <p>Every commercial facility in our network holds active Ministry of Health permits and commercial operating licenses.</p>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">02</div>
+          <h3>Flexible Off-Peak Shifts</h3>
+          <p>Book morning prep, afternoon bakery runs, or late-night dinners with transparent rates starting from 240 EGP/hour.</p>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">03</div>
+          <h3>Turnkey Equipment</h3>
+          <p>Walk-in chillers, convection ovens, 6-burner gas ranges, stainless steel stations, and optional guest dining rooms.</p>
+        </div>
+        <div class="hiw-step">
+          <div class="hiw-num">04</div>
+          <h3>Verified Host Confirmation</h3>
+          <p>Request open shift slots directly. Kitchen hosts confirm bookings within 24 hours with standard deposit escrow protection.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- Search Box -->
     <div class="search-box">
       <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="search-ico"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="search" id="kSearch" placeholder="Search by kitchen name, Dokki, Zamalek, Maadi, New Cairo..." autocomplete="off">
+      <input type="search" id="kSearch" placeholder="Search by kitchen name, equipment, Zamalek, Maadi, Dokki, New Cairo..." autocomplete="off">
     </div>
 
-    <!-- Filter Chips -->
+    <!-- Operational Filter Rows -->
     <div class="filter-row">
-      <div id="chips" class="chips"></div>
+      <div id="districtChips" class="district-chips"></div>
+      <div id="setupChips" class="setup-chips"></div>
+      <div id="equipChips" class="chips"></div>
     </div>
 
-    <p class="muted" id="count" style="font-size:13.5px;font-weight:600;margin:12px 0"></p>
+    <p class="muted" id="count" style="font-size:13.5px;font-weight:600;margin:16px 0 12px"></p>
     <div id="kitchenList">${skeletonCards(3)}</div>
   `;
 
-  updateKitchenChips();
+  updateKitchenFiltersUI();
 
   try {
     var data = await api('GET', '/kitchens');
@@ -434,19 +473,23 @@ async function renderKitchensView() {
   }
 }
 
-function updateKitchenChips() {
-  var c = $1('#chips');
-  if (!c) return;
+function updateKitchenFiltersUI() {
+  var dEl = $1('#districtChips');
+  var sEl = $1('#setupChips');
+  var eEl = $1('#equipChips');
+  if (!dEl) return;
 
-  var distHtml = '<div class="district-chips">' + DISTRICTS.map(d =>
-    '<button type="button" class="district-chip' + (S.district === d ? ' on' : '') + '" data-act="district" data-district="' + d + '">' + d + '</button>'
-  ).join('') + '</div>';
+  dEl.innerHTML = DISTRICTS.map(d =>
+    `<button type="button" class="district-chip${S.district === d ? ' on' : ''}" data-act="district" data-district="${d}">${d}</button>`
+  ).join('');
 
-  var equipHtml = '<div class="chips" style="margin-top:8px">' + EQUIP.map(t =>
-    '<button type="button" class="chip' + (S.filters.indexOf(t) > -1 ? ' on' : '') + '" data-act="filter" data-tag="' + t + '">' + t + '</button>'
-  ).join('') + (S.filters.length || S.district !== 'All' || S.searchQuery ? '<button type="button" class="chip clear" data-act="clearfilter">Clear all</button>' : '') + '</div>';
+  sEl.innerHTML = SETUPS.map(s =>
+    `<button type="button" class="setup-chip${S.setup === s ? ' on' : ''}" data-act="setup" data-setup="${s}">${s}</button>`
+  ).join('');
 
-  c.innerHTML = distHtml + equipHtml;
+  eEl.innerHTML = EQUIP.map(t =>
+    `<button type="button" class="chip${S.filters.indexOf(t) > -1 ? ' on' : ''}" data-act="filter" data-tag="${t}">${t}</button>`
+  ).join('') + ((S.filters.length || S.district !== 'All' || S.setup !== 'All Setups' || S.searchQuery) ? '<button type="button" class="chip clear" data-act="clearfilter">Reset Filters</button>' : '');
 }
 
 function renderFilteredKitchens() {
@@ -454,16 +497,28 @@ function renderFilteredKitchens() {
   var q = (S.searchQuery || '').trim().toLowerCase();
 
   var filtered = list.filter(function(k) {
+    // District
     if (S.district && S.district !== 'All') {
       if (!k.address || k.address.toLowerCase().indexOf(S.district.toLowerCase()) === -1) {
         return false;
       }
     }
+    // Setup Type
+    if (S.setup && S.setup !== 'All Setups') {
+      var sLow = S.setup.toLowerCase();
+      var kNameLow = (k.name || '').toLowerCase();
+      var kEquipLow = (k.equipment || k.equip || []).join(' ').toLowerCase();
+      if (sLow.indexOf('bakery') > -1 && kNameLow.indexOf('baker') === -1 && kEquipLow.indexOf('convection') === -1) return false;
+      if (sLow.indexOf('supper') > -1 && kEquipLow.indexOf('induction') === -1 && kNameLow.indexOf('studio') === -1) return false;
+      if (sLow.indexOf('hot') > -1 && kEquipLow.indexOf('gas range') === -1) return false;
+    }
+    // Equipment
     if (S.filters && S.filters.length) {
       var kEquip = (k.equipment || k.equip || []).map(e => e.toLowerCase());
       var hasAll = S.filters.every(f => kEquip.some(ke => ke.indexOf(f.toLowerCase()) > -1));
       if (!hasAll) return false;
     }
+    // Text search query
     if (q) {
       var matchName = (k.name || '').toLowerCase().indexOf(q) > -1;
       var matchAddr = (k.address || '').toLowerCase().indexOf(q) > -1;
@@ -482,9 +537,9 @@ function renderFilteredKitchens() {
   if (!filtered.length) {
     kl.innerHTML = `
       <div class="card empty" style="text-align:center;padding:40px 20px">
-        <h2>No Commercial Kitchens Match Your Search</h2>
-        <p class="muted">Try adjusting your filters or search terms.</p>
-        <button class="ghost" data-act="clearfilter" style="margin-top:12px">Reset Filters</button>
+        <h2>No Commercial Kitchens Found</h2>
+        <p class="muted">Try adjusting your district or setup filters.</p>
+        <button class="ghost" data-act="clearfilter" style="margin-top:12px">Reset All Filters</button>
       </div>
     `;
     return;
@@ -495,68 +550,164 @@ function renderFilteredKitchens() {
     var st = k.verification_status || k.status || 'pending';
     var equip = k.equipment || k.equip || [];
     var photo = hashPhoto(k.name || k.id, KITCHEN_PHOTOS);
+    var openSlots = sl.filter(s => s.status !== 'booked');
 
     return `
       <div class="card lift">
         <div class="card-media">
           <img class="card-img" src="${photo}" alt="${esc(k.name)}" loading="lazy">
-          <div class="card-badge-top">${st === 'verified' ? '✓ MOH Verified' : 'Pending Review'}</div>
+          <div class="card-badge-top">${st === 'verified' ? '✓ Licensed & Inspected' : 'Pending Verification'}</div>
           <div class="card-badge-bottom">${ICONS.pin} ${esc(k.address)}</div>
         </div>
 
         <div class="row">
-          <b class="kt" style="font-size:20px">${esc(k.name)}</b>
-          <div class="price" style="font-size:20px">${fmt(k.hourly_rate)} <span class="muted" style="font-size:13px">/ hr</span></div>
+          <div>
+            <b class="kt" style="font-size:20px">${esc(k.name)}</b>
+            <div class="muted" style="font-size:13px;margin-top:2px">MOH Permit: ${esc(k.license_info)}</div>
+          </div>
+          <div style="text-align:right">
+            <div class="price" style="font-size:22px">${fmt(k.hourly_rate)}</div>
+            <span class="muted" style="font-size:12px">hourly shift rate</span>
+          </div>
         </div>
 
-        <div class="muted" style="font-size:13px;margin:4px 0 10px">License Permit: ${esc(k.license_info)}</div>
-        
-        <div class="chips sm" style="margin-bottom:14px">
+        <!-- Spec Pills -->
+        <div class="chips sm" style="margin:12px 0 10px">
           ${equip.map(e => '<span class="chip">' + esc(e) + '</span>').join('')}
+          <span class="chip" style="background:var(--ok-bg);color:var(--ok);border-color:var(--ok-border)">Health Code Checked</span>
         </div>
 
-        <div class="slots">
-          <b style="font-size:13px;color:var(--text);display:block;margin-bottom:6px">Available Shift Slots</b>
-          ${sl.length ? sl.map(s => slotRow(s, k)).join('') : '<div class="muted" style="font-size:13px">No shift slots published yet.</div>'}
+        <!-- Shift Slot Availability Preview -->
+        <div class="slot-preview-box">
+          <div class="slot-preview-title">
+            <span>Next Open Shift Slots</span>
+            <span style="color:var(--accent);font-weight:700">${openSlots.length} available</span>
+          </div>
+          ${openSlots.length ? openSlots.slice(0, 3).map(s => {
+            var hrs = slotHours(s);
+            var cost = hrs * (k.hourly_rate || 250);
+            return `
+              <div class="slot-preview-item">
+                <span>${ICONS.cal} ${fmtSlot(s)} (${hrs} hrs)</span>
+                <b>${fmt(cost)}</b>
+              </div>
+            `;
+          }).join('') : '<div class="muted" style="font-size:12.5px">No open shifts scheduled right now.</div>'}
+        </div>
+
+        <div class="row" style="margin-top:14px;gap:8px">
+          <button class="ghost" data-act="kitchen-detail" data-id="${k.id}" style="flex:1">View Details & Rules</button>
+          <button data-act="kitchen-detail" data-id="${k.id}" style="flex:1">Request Shift Booking</button>
         </div>
       </div>
     `;
   }).join('');
 }
 
-function slotRow(s, k) {
-  var mine = S.bookings.filter(b => b.slot_id === s.id && (b.chef_id === S.session?.id || b.chef === me()))[0];
-  var hrs = slotHours(s);
-  var rate = k.hourly_rate || 250;
-  var cost = hrs * rate;
-  var actionHtml = '';
+// ── KITCHEN DETAIL DRAWER / MODAL ───────────────────────────────────────────
+function openKitchenDetail(kId) {
+  var k = by(S.kitchens, kId);
+  if (!k) return;
 
-  if (s.status === 'booked') {
-    actionHtml = B('booked', 'Booked');
-  } else if (k.verification_status !== 'verified' && k.status !== 'verified') {
-    actionHtml = '<span class="muted" style="font-size:12px">Pending verification</span>';
-  } else if (mine) {
-    actionHtml = B(mine.status, 'Request ' + mine.status);
-  } else if (role() === 'chef') {
-    actionHtml = `<button data-act="request" data-id="${s.id}" style="padding:6px 14px;font-size:13px">Request Shift</button>`;
-  } else if (role() === 'guest') {
-    actionHtml = `<a class="btn ghost" href="#login" style="padding:6px 12px;font-size:12px">Chef Sign-in to Request</a>`;
-  } else {
-    actionHtml = '<span class="muted" style="font-size:12px">Chef access required</span>';
+  var sl = S.slots.filter(s => s.kitchen_id === k.id);
+  var photo = hashPhoto(k.name || k.id, KITCHEN_PHOTOS);
+  var equip = k.equipment || k.equip || [];
+  var st = k.verification_status || k.status || 'pending';
+  var openSlots = sl.filter(s => s.status !== 'booked');
+
+  var isChef = role() === 'chef';
+  var authPromptHtml = '';
+  if (!isChef) {
+    authPromptHtml = `
+      <div style="background:var(--warn-bg);border:1px solid var(--warn-border);padding:14px;border-radius:12px;margin:16px 0">
+        <b style="color:var(--warn);font-size:13px">Guest Chef Account Required to Request Shifts</b>
+        <p class="muted" style="font-size:12px;margin:4px 0 10px">Sign in as a Chef to submit shift booking requests to this kitchen host.</p>
+        <button class="demo-role-btn active" data-act="demo" data-role="chef" style="font-size:12px">⚡ 1-Click Continue as Chef Omar</button>
+      </div>
+    `;
   }
 
-  return `
-    <div class="slot">
-      <div>
-        <div style="font-weight:600">${ICONS.cal} ${fmtSlot(s)}</div>
-        <div class="muted" style="font-size:12px">${hrs} hrs × ${fmt(rate)} = <b>${fmt(cost)}</b></div>
+  var slotsHtml = '';
+  if (!openSlots.length) {
+    slotsHtml = '<div class="muted" style="padding:14px 0">No open shift slots available for this kitchen at this time.</div>';
+  } else {
+    slotsHtml = openSlots.map(s => {
+      var hrs = slotHours(s);
+      var cost = hrs * (k.hourly_rate || 250);
+      var mine = S.bookings.filter(b => b.slot_id === s.id && (b.chef_id === S.session?.id || b.chef === me()))[0];
+      var btnHtml = '';
+
+      if (mine) {
+        btnHtml = B(mine.status, 'Request ' + mine.status);
+      } else if (isChef) {
+        btnHtml = `<button data-act="request" data-id="${s.id}" style="padding:6px 14px;font-size:13px">Request Shift</button>`;
+      } else {
+        btnHtml = `<button data-act="demo" data-role="chef" style="padding:6px 14px;font-size:12px">Sign in to Book</button>`;
+      }
+
+      return `
+        <div class="shift-select-card">
+          <div>
+            <div style="font-weight:700;font-size:14px">${ICONS.cal} ${fmtSlot(s)}</div>
+            <div class="muted" style="font-size:12px">${hrs} Hours Shift · Total: <b>${fmt(cost)}</b></div>
+          </div>
+          ${btnHtml}
+        </div>
+      `;
+    }).join('');
+  }
+
+  var modalHtml = `
+    <div class="kitchen-detail-modal">
+      <img class="detail-img-banner" src="${photo}" alt="${esc(k.name)}">
+      
+      <div class="row" style="margin-bottom:8px">
+        <div>
+          <span class="ticket-badge">${st === 'verified' ? '✓ MOH Licensed Commercial Space' : 'Pending License Verification'}</span>
+          <h2 style="margin:4px 0 0;font-size:22px;font-weight:800">${esc(k.name)}</h2>
+        </div>
+        <div style="text-align:right">
+          <div class="price" style="font-size:22px">${fmt(k.hourly_rate)}</div>
+          <span class="muted" style="font-size:12px">hourly rate</span>
+        </div>
       </div>
-      ${actionHtml}
+
+      <div class="muted" style="font-size:14px;margin-bottom:16px">${ICONS.pin} ${esc(k.address)} · Permit #${esc(k.license_info)}</div>
+
+      <div class="detail-section-title">Commercial Equipment & Stations</div>
+      <div class="spec-grid">
+        ${equip.map(e => '<div class="spec-item"><span style="color:var(--ok)">✓</span> <b>' + esc(e) + '</b></div>').join('')}
+        <div class="spec-item"><span style="color:var(--ok)">✓</span> Stainless Steel Prep Island</div>
+        <div class="spec-item"><span style="color:var(--ok)">✓</span> Grease Trap & Extraction Hood</div>
+        <div class="spec-item"><span style="color:var(--ok)">✓</span> 3-Compartment Sanitizing Sink</div>
+      </div>
+
+      <div class="detail-section-title">House Rules & Food Safety Standards</div>
+      <ul class="rule-list">
+        <li class="rule-item"><span class="rule-icon">✓</span> Hairnets, clean chef uniform, and pre-shift walk-in temperature log mandatory.</li>
+        <li class="rule-item"><span class="rule-icon">✓</span> Complete station sanitization and oil waste disposal required prior to checkout.</li>
+        <li class="rule-item"><span class="rule-icon">✓</span> Supper club dining room access permitted for approved tasting menus.</li>
+        <li class="rule-item"><span class="rule-icon">✓</span> 100% refundable security deposit returned within 24 hours of inspection.</li>
+      </ul>
+
+      <div class="host-badge-box">
+        <div>
+          <div style="font-weight:700;font-size:13.5px">Commercial Kitchen Host · ${esc(k.host_name || 'Verified Host')}</div>
+          <div class="muted" style="font-size:12px">Host average booking confirmation time: Under 2 hours</div>
+        </div>
+        <span class="badge approved">Verified Operator</span>
+      </div>
+
+      <div class="detail-section-title">Available Shift Slots</div>
+      ${slotsHtml}
+      ${authPromptHtml}
     </div>
   `;
+
+  openModal(k.name, modalHtml);
 }
 
-// 3. DINER TICKETS & RESERVATIONS VIEW
+// ── VIEW 3: DINER TICKETS & RESERVATIONS ────────────────────────────────────
 async function renderTicketsView() {
   if (role() === 'guest') {
     location.replace('#login');
@@ -635,7 +786,7 @@ async function renderTicketsView() {
   }
 }
 
-// 4. CHEF DASHBOARD VIEW
+// ── VIEW 4: CHEF DASHBOARD ──────────────────────────────────────────────────
 async function renderChefView() {
   if (role() !== 'chef') {
     toast('Chef account required to access Chef Hub.');
@@ -721,7 +872,7 @@ async function renderChefView() {
   }
 }
 
-// 5. HOST DASHBOARD VIEW
+// ── VIEW 5: HOST DASHBOARD ──────────────────────────────────────────────────
 async function renderHostView() {
   if (role() !== 'host') {
     toast('Kitchen Host account required.');
@@ -803,7 +954,7 @@ async function renderHostView() {
   }
 }
 
-// 6. ADMIN CONSOLE VIEW (RBAC Guarded!)
+// ── VIEW 6: ADMIN CONSOLE (RBAC Guarded) ────────────────────────────────────
 async function renderAdminView() {
   if (role() !== 'admin') {
     toast('Access denied. Administrator privileges required.');
@@ -816,7 +967,7 @@ async function renderAdminView() {
     <div class="dashboard-header">
       <div class="dashboard-title-area">
         <h1>Platform Administration Console</h1>
-        <p class="sub">License verifications, compliance audits, and platform metrics.</p>
+        <p class="sub">Commercial license verifications, compliance audits, and platform metrics.</p>
       </div>
     </div>
 
@@ -871,7 +1022,7 @@ async function renderAdminView() {
   }
 }
 
-// 7. SIGN IN / REGISTER VIEW
+// ── VIEW 7: SIGN IN / REGISTER ──────────────────────────────────────────────
 function renderLoginView() {
   var view = $1('#appView');
   view.innerHTML = `
@@ -940,22 +1091,22 @@ function bCard(b, isHost) {
 
 // ── ROUTER ──────────────────────────────────────────────────────────────────
 function route() {
-  var hash = (location.hash || '#events').slice(1);
+  var r = getActiveRoute();
   updateNav();
 
-  if (hash === 'events') {
+  if (r === 'events') {
     renderEventsView();
-  } else if (hash === 'kitchens') {
+  } else if (r === 'kitchens') {
     renderKitchensView();
-  } else if (hash === 'tickets') {
+  } else if (r === 'tickets') {
     renderTicketsView();
-  } else if (hash.indexOf('chef') === 0) {
+  } else if (r === 'chef') {
     renderChefView();
-  } else if (hash.indexOf('host') === 0) {
+  } else if (r === 'host') {
     renderHostView();
-  } else if (hash.indexOf('admin') === 0) {
+  } else if (r === 'admin') {
     renderAdminView();
-  } else if (hash === 'login') {
+  } else if (r === 'login') {
     renderLoginView();
   } else {
     renderEventsView();
@@ -1059,28 +1210,41 @@ document.addEventListener('click', async e => {
     return;
   }
 
-  // District & Equipment Filters
+  // Kitchen Filters
   if (a === 'district') {
     S.district = b.dataset.district;
     renderFilteredKitchens();
-    updateKitchenChips();
+    updateKitchenFiltersUI();
+    return;
+  }
+  if (a === 'setup') {
+    S.setup = b.dataset.setup;
+    renderFilteredKitchens();
+    updateKitchenFiltersUI();
     return;
   }
   if (a === 'filter') {
     var i = S.filters.indexOf(b.dataset.tag);
     i > -1 ? S.filters.splice(i, 1) : S.filters.push(b.dataset.tag);
     renderFilteredKitchens();
-    updateKitchenChips();
+    updateKitchenFiltersUI();
     return;
   }
   if (a === 'clearfilter') {
     S.filters = [];
     S.district = 'All';
+    S.setup = 'All Setups';
     S.searchQuery = '';
     var si = $1('#kSearch');
     if (si) si.value = '';
     renderFilteredKitchens();
-    updateKitchenChips();
+    updateKitchenFiltersUI();
+    return;
+  }
+
+  // Kitchen Detail Drawer
+  if (a === 'kitchen-detail') {
+    openKitchenDetail(id);
     return;
   }
 
@@ -1184,11 +1348,16 @@ document.addEventListener('click', async e => {
     return;
   }
 
-  // Live Mutations
+  // Live Backend Mutations
   try {
-    if (a === 'request' && role() === 'chef') {
+    if (a === 'request') {
+      if (role() !== 'chef') {
+        toast('Chef account required. Switched to Chef Omar.');
+        await loginOrRegister(DEMO_USERS.chef.name, DEMO_USERS.chef.email, DEMO_USERS.chef.password, DEMO_USERS.chef.role);
+      }
       await api('POST', '/bookings', { slot_id: id });
       toast('Booking request sent to kitchen host!');
+      closeModal();
       route();
     } else if (a === 'approve' && role() === 'host') {
       await api('PATCH', '/bookings/' + id + '/status', { status: 'approved' });
@@ -1330,6 +1499,7 @@ document.addEventListener('input', e => {
 initSession();
 initTheme();
 window.addEventListener('hashchange', route);
+window.addEventListener('popstate', route);
 window.addEventListener('storage', () => { initSession(); route(); });
 route();
 

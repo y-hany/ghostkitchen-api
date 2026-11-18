@@ -1384,3 +1384,201 @@ body.locked { overflow: hidden; }
 .demo-drawer-toggle:hover {
   color: var(--text);
 }
+
+/* ── How It Works for Commercial Kitchens ── */
+.how-it-works {
+  background: var(--card-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 24px;
+  margin-bottom: 26px;
+}
+.hiw-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.hiw-header h2 {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+.hiw-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+.hiw-step {
+  background: var(--card);
+  padding: 16px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+}
+.hiw-num {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 6px;
+  font-family: ui-monospace, "SF Mono", monospace;
+}
+.hiw-step h3 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+.hiw-step p {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* ── Setup & Operational Filter Chips ── */
+.setup-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.setup-chip {
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.setup-chip:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+.setup-chip.on {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+
+/* ── Slot Availability Preview on Card ── */
+.slot-preview-box {
+  background: var(--card-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 12px;
+  margin: 12px 0 16px;
+}
+.slot-preview-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.slot-preview-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px dashed var(--line);
+}
+.slot-preview-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* ── Kitchen Detail Modal & House Rules ── */
+.kitchen-detail-modal {
+  max-width: 620px;
+}
+.detail-img-banner {
+  width: 100%;
+  height: 220px;
+  border-radius: var(--r-sm);
+  object-fit: cover;
+  margin-bottom: 18px;
+}
+.detail-section-title {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin: 20px 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.spec-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.spec-item {
+  background: var(--card-subtle);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rule-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rule-item {
+  font-size: 13px;
+  color: var(--text);
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+.rule-icon {
+  color: var(--ok);
+  font-weight: 800;
+}
+.host-badge-box {
+  background: var(--accent-l);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: var(--r-sm);
+  padding: 12px 16px;
+  margin: 18px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.shift-select-card {
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all .15s ease;
+}
+.shift-select-card:hover {
+  border-color: var(--accent);
+}
+.shift-select-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-l);
+}
