@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
        JOIN kitchens k ON k.id = s.kitchen_id
        JOIN users    u ON u.id = b.chef_id
        LEFT JOIN tickets t ON t.event_id = e.id
-       WHERE b.status = 'approved'
+       WHERE b.status = 'approved' AND (e.verification_status = 'verified' OR e.verification_status IS NULL)
        GROUP BY e.id, b.id, s.id, k.id, u.id
        ORDER BY e.starts_at ASC NULLS LAST, e.created_at DESC`
     );
@@ -113,8 +113,8 @@ router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO events (booking_id, title, menu_description, ticket_price, capacity, starts_at)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO events (booking_id, title, menu_description, ticket_price, capacity, starts_at, verification_status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending')
        RETURNING *`,
       [booking_id, title.trim(), menu_description.trim(), price, cap, startsAt]
     );
@@ -126,6 +126,42 @@ router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
       return res.status(400).json({ error: err.message });
     console.error('POST /api/events:', err.message);
     return res.status(500).json({ error: 'Could not create event.' });
+  }
+});
+
+// ── PATCH /api/events/:id/verify ───────────────────────────────────────────
+router.patch('/:id/verify', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `UPDATE events
+       SET verification_status = 'verified', verified_by = $2, verified_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [req.params.id, req.user.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Event not found.' });
+    return res.json({ event: rows[0] });
+  } catch (err) {
+    console.error('PATCH /api/events/:id/verify:', err.message);
+    return res.status(500).json({ error: 'Could not verify event.' });
+  }
+});
+
+// ── PATCH /api/events/:id/reject ───────────────────────────────────────────
+router.patch('/:id/reject', verifyToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `UPDATE events
+       SET verification_status = 'rejected', verified_by = $2, verified_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [req.params.id, req.user.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Event not found.' });
+    return res.json({ event: rows[0] });
+  } catch (err) {
+    console.error('PATCH /api/events/:id/reject:', err.message);
+    return res.status(500).json({ error: 'Could not reject event.' });
   }
 });
 

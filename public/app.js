@@ -1158,51 +1158,124 @@ async function renderAdminView() {
     <div class="dashboard-header">
       <div class="dashboard-title-area">
         <h1>Platform Administration Console</h1>
-        <p class="sub">Commercial license verifications, compliance audits, and platform metrics.</p>
+        <p class="sub">Verify commercial kitchen facilities, approve supper club pop-ups, and audit marketplace compliance.</p>
       </div>
     </div>
 
     <div id="adminStatsFeed">${skeletonCards(1)}</div>
 
-    <h2>Commercial Licenses Awaiting Verification</h2>
-    <div id="adminPendingFeed">${skeletonCards(2)}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:32px 0 14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <h2 style="margin:0">Commercial Kitchens Awaiting Verification</h2>
+        <span id="kitchenPendingCount" class="badge">Checking...</span>
+      </div>
+    </div>
+    <div id="adminPendingFeed">${skeletonCards(1)}</div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:36px 0 14px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <h2 style="margin:0">Supper Club & Pop-up Events Awaiting Verification</h2>
+        <span id="eventPendingCount" class="badge">Checking...</span>
+      </div>
+    </div>
+    <div id="adminEventsPendingFeed">${skeletonCards(1)}</div>
   `;
 
   try {
-    var [sData, kData] = await Promise.all([
+    var [sData, kData, eData] = await Promise.all([
       api('GET', '/admin/stats'),
-      api('GET', '/admin/kitchens?status=pending')
+      api('GET', '/admin/kitchens?status=pending'),
+      api('GET', '/admin/events?status=pending')
     ]);
     var st = sData.stats || {};
     $1('#adminStatsFeed').innerHTML = `
       <div class="banner">
-        <div class="bn-h">${ICONS.shield} Platform Health Overview <span class="badge">Live Production</span></div>
+        <div class="bn-h">${ICONS.shield} Marketplace Compliance & Platform Health <span class="badge">Live Production</span></div>
         <div class="bn-g">
           <div><b>${st.kitchens_verified || 0}</b><span>Verified Kitchens</span></div>
-          <div><b>${st.kitchens_pending || 0}</b><span>Pending Review</span></div>
-          <div><b>${st.total_bookings || 0}</b><span>Kitchen Bookings</span></div>
+          <div><b>${st.kitchens_pending || 0}</b><span>Kitchens Pending</span></div>
+          <div><b>${st.events_verified || 0}</b><span>Verified Pop-ups</span></div>
+          <div><b>${st.events_pending || 0}</b><span>Pop-ups Pending</span></div>
+          <div><b>${st.total_bookings || 0}</b><span>Shift Bookings</span></div>
           <div><b>${st.seats_sold || 0}</b><span>Tickets Sold</span></div>
         </div>
         <div class="bn-f">Total Marketplace Ticket Revenue: <b>${fmt(st.revenue_egp)}</b></div>
       </div>
     `;
 
-    var pending = kData.kitchens || [];
+    var pendingKitchens = kData.kitchens || [];
+    var kBadge = $1('#kitchenPendingCount');
+    if (kBadge) {
+      kBadge.className = 'badge ' + (pendingKitchens.length ? 'pending' : 'approved');
+      kBadge.textContent = pendingKitchens.length + ' pending';
+    }
+
     var pf = $1('#adminPendingFeed');
-    if (!pending.length) {
+    if (!pendingKitchens.length) {
       pf.innerHTML = '<div class="card empty"><p class="muted">All commercial kitchen licenses are verified and up to date.</p></div>';
     } else {
-      pf.innerHTML = pending.map(k => `
+      pf.innerHTML = pendingKitchens.map(k => `
         <div class="card">
-          <div class="row">
-            <b class="kt" style="font-size:18px">${esc(k.name)}</b>
-            ${B('pending', 'Pending Approval')}
+          <div class="row" style="align-items:flex-start">
+            <div>
+              <b class="kt" style="font-size:18px">${esc(k.name)}</b>
+              <div class="muted" style="margin:3px 0 0;font-size:13px">${ICONS.pin} ${esc(k.address)}</div>
+            </div>
+            ${B('pending', 'Pending MOH Review')}
           </div>
-          <div class="muted" style="margin:4px 0">${ICONS.pin} ${esc(k.address)}</div>
-          <div class="muted">License info: <b>${esc(k.license_info)}</b> · Rate: ${fmt(k.hourly_rate)} / hr</div>
-          <div class="row act" style="margin-top:12px">
-            <button data-act="verify" data-id="${k.id}">Approve License</button>
-            <button class="bad" data-act="reject" data-id="${k.id}">Reject</button>
+          <div class="muted" style="margin:8px 0;font-size:13px">
+            Host: <b>${esc(k.host_name || 'Host')}</b> (${esc(k.host_email || '')}) · Rate: <b>${fmt(k.hourly_rate)} / hr</b>
+          </div>
+          <div class="muted" style="font-size:13px">
+            License Info: <b>${esc(k.license_info)}</b>
+            ${k.equipment && k.equipment.length ? ` · Equipment: ${esc(k.equipment.join(', '))}` : ''}
+          </div>
+          <div class="row act" style="margin-top:14px;gap:8px">
+            <button data-act="verify-kitchen" data-id="${k.id}" style="background:#10b981;border-color:#10b981;color:#fff;font-weight:700">Approve Kitchen License</button>
+            <button class="bad" data-act="reject-kitchen" data-id="${k.id}">Reject</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    var pendingEvents = eData.events || [];
+    var eBadge = $1('#eventPendingCount');
+    if (eBadge) {
+      eBadge.className = 'badge ' + (pendingEvents.length ? 'pending' : 'approved');
+      eBadge.textContent = pendingEvents.length + ' pending';
+    }
+
+    var epf = $1('#adminEventsPendingFeed');
+    if (!pendingEvents.length) {
+      epf.innerHTML = '<div class="card empty"><p class="muted">All chef supper club pop-ups are verified and published.</p></div>';
+    } else {
+      epf.innerHTML = pendingEvents.map(ev => `
+        <div class="card">
+          <div class="row" style="align-items:flex-start">
+            <div>
+              <b class="kt" style="font-size:18px">${esc(ev.title)}</b>
+              <div class="muted" style="margin:3px 0 0;font-size:13px">
+                ${ICONS.chef} Chef: <b>${esc(ev.chef_name)}</b> (${esc(ev.chef_email || '')}) · ${ICONS.pin} ${esc(ev.kitchen_name)} (${esc(ev.address)})
+              </div>
+            </div>
+            ${B('pending', 'Pending Event Approval')}
+          </div>
+
+          <div style="margin:10px 0;font-size:13px;display:flex;gap:14px;flex-wrap:wrap">
+            <span>Ticket Price: <b>${fmt(ev.ticket_price)}</b></span>
+            <span>Capacity: <b>${ev.capacity} seats</b></span>
+            <span>Booking: <b>#${ev.booking_no || 'Shift'}</b></span>
+            ${ev.starts_at ? `<span>${ICONS.cal} <b>${new Date(ev.starts_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</b></span>` : ''}
+          </div>
+
+          <div style="font-size:13px;background:var(--surface);padding:10px 14px;border-radius:8px;margin:8px 0;border:1px solid var(--border)">
+            <b style="color:var(--accent)">Tasting Menu Preview:</b>
+            <div style="margin-top:4px;color:var(--text);line-height:1.4">${esc(ev.menu_description)}</div>
+          </div>
+
+          <div class="row act" style="margin-top:14px;gap:8px">
+            <button data-act="verify-event" data-id="${ev.id}" style="background:#10b981;border-color:#10b981;color:#fff;font-weight:700">Approve Pop-up Event</button>
+            <button class="bad" data-act="reject-event" data-id="${ev.id}">Reject</button>
           </div>
         </div>
       `).join('');
@@ -1677,13 +1750,21 @@ document.addEventListener('click', async e => {
       await api('PATCH', '/bookings/' + id + '/decline');
       toast('Booking declined.');
       route();
-    } else if (a === 'verify' && role() === 'admin') {
+    } else if ((a === 'verify' || a === 'verify-kitchen') && role() === 'admin') {
       await api('PATCH', '/kitchens/' + id + '/verify');
-      toast('Commercial license approved!');
+      toast('Commercial kitchen license approved!');
       route();
-    } else if (a === 'reject' && role() === 'admin') {
+    } else if ((a === 'reject' || a === 'reject-kitchen') && role() === 'admin') {
       await api('PATCH', '/kitchens/' + id + '/reject');
-      toast('License rejected.');
+      toast('Kitchen license rejected.');
+      route();
+    } else if (a === 'verify-event' && role() === 'admin') {
+      await api('PATCH', '/events/' + id + '/verify');
+      toast('Supper club pop-up approved and published!');
+      route();
+    } else if (a === 'reject-event' && role() === 'admin') {
+      await api('PATCH', '/events/' + id + '/reject');
+      toast('Pop-up event rejected.');
       route();
     }
   } catch (err) {
