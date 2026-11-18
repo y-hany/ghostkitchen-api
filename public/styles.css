@@ -1889,3 +1889,108 @@ body.locked { overflow: hidden; }
   border-color: var(--accent);
   background: var(--accent-l);
 }
+
+/* ── Kitchen Host Hub Styles ── */
+.host-feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 28px 0 14px;
+}
+
+.host-filter-tabs {
+  display: inline-flex;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.host-tab-btn {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.2;
+}
+
+.host-tab-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.host-tab-btn.on {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(224, 93, 58, 0.35);
+}
+
+.booking-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.booking-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+.booking-payout-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 99px;
+  background: rgba(224, 93, 58, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(224, 93, 58, 0.25);
+  letter-spacing: 0.01em;
+}
+
+.host-kitchen-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.host-kitchen-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn-slot-shortcut {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-slot-shortcut:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(224, 93, 58, 0.08);
+}
+
+.badge.warning {
+  background: var(--warn-bg);
+  color: var(--warn);
+  border: 1px solid var(--warn-border);
+}
+

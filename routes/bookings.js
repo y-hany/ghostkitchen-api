@@ -19,7 +19,7 @@ router.get('/', verifyToken, async (req, res) => {
       sql = `
         SELECT b.id, b.booking_no, b.status, b.decided_at, b.created_at, b.updated_at,
                b.slot_id, s.start_time, s.end_time, s.status AS slot_status,
-               k.id AS kitchen_id, k.name AS kitchen_name, k.address
+               k.id AS kitchen_id, k.name AS kitchen_name, k.address, k.hourly_rate
         FROM bookings b
         JOIN slots    s ON s.id = b.slot_id
         JOIN kitchens k ON k.id = s.kitchen_id
@@ -32,7 +32,7 @@ router.get('/', verifyToken, async (req, res) => {
       sql = `
         SELECT b.id, b.booking_no, b.status, b.decided_at, b.created_at, b.updated_at,
                b.slot_id, s.start_time, s.end_time,
-               k.id AS kitchen_id, k.name AS kitchen_name, k.address,
+               k.id AS kitchen_id, k.name AS kitchen_name, k.address, k.hourly_rate,
                u.id AS chef_id, u.name AS chef_name, u.email AS chef_email
         FROM bookings b
         JOIN slots    s ON s.id  = b.slot_id
@@ -46,7 +46,7 @@ router.get('/', verifyToken, async (req, res) => {
       sql = `
         SELECT b.id, b.booking_no, b.status, b.decided_at, b.created_at, b.updated_at,
                b.slot_id, s.start_time, s.end_time,
-               k.name AS kitchen_name,
+               k.name AS kitchen_name, k.hourly_rate,
                u.name AS chef_name
         FROM bookings b
         JOIN slots    s ON s.id = b.slot_id

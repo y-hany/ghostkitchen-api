@@ -1007,31 +1007,41 @@ async function renderHostView() {
     <div class="dashboard-header">
       <div class="dashboard-title-area">
         <h1>Kitchen Host Hub</h1>
-        <p class="sub">Signed in as <b>${esc(me())}</b>. Manage commercial listings, shift slots, and chef requests.</p>
+        <p class="sub">Signed in as <b>${esc(me())}</b>. Manage commercial listings, shift availability, and chef booking requests.</p>
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="btn-primary-action" data-act="modal-kitchen">+ List Kitchen</button>
-        <button class="btn-primary-action ghost" data-act="modal-slot">+ Add Shift Slot</button>
+      <div>
+        <button class="btn-primary-action" data-act="modal-slot">+ Add Shift Slot</button>
       </div>
     </div>
 
     <div id="hostStats"></div>
 
-    <h2>Incoming Booking Requests</h2>
+    <div class="host-feed-header">
+      <h2 style="margin:0">Incoming Booking Requests</h2>
+      <div class="host-filter-tabs" id="hostFilterTabs">
+        <button class="host-tab-btn on" data-act="filter-host-requests" data-tab="pending">Pending</button>
+        <button class="host-tab-btn" data-act="filter-host-requests" data-tab="approved">Approved</button>
+        <button class="host-tab-btn" data-act="filter-host-requests" data-tab="all">All</button>
+      </div>
+    </div>
     <div id="hostRequestsFeed">${skeletonCards(2)}</div>
 
-    <h2>My Listed Kitchens</h2>
+    <div class="host-feed-header" style="margin-top:36px">
+      <h2 style="margin:0">My Listed Kitchens</h2>
+    </div>
     <div id="hostKitchensFeed">${skeletonCards(1)}</div>
   `;
 
   try {
-    var [bData, kData] = await Promise.all([
+    var [bData, kData, sData] = await Promise.all([
       api('GET', '/bookings').catch(() => ({ bookings: [] })),
-      api('GET', '/kitchens/mine').catch(() => api('GET', '/kitchens')).catch(() => ({ kitchens: [] }))
+      api('GET', '/kitchens/mine').catch(() => api('GET', '/kitchens')).catch(() => ({ kitchens: [] })),
+      api('GET', '/slots').catch(() => ({ slots: [] }))
     ]);
     S.bookings = bData.bookings || [];
     var hostId = S.session ? S.session.id : null;
     S.kitchens = (kData.kitchens || []).filter(k => !hostId || !k.host_id || k.host_id === hostId);
+    S.slots = sData.slots || [];
 
     var pCount = S.bookings.filter(b => b.status === 'pending').length;
     var aCount = S.bookings.filter(b => b.status === 'approved').length;
@@ -1044,12 +1054,16 @@ async function renderHostView() {
       </div>
     `;
 
-    var rf = $1('#hostRequestsFeed');
-    if (!S.bookings.length) {
-      rf.innerHTML = '<div class="card empty"><p class="muted">No booking requests from chefs yet.</p></div>';
-    } else {
-      rf.innerHTML = S.bookings.map(b => bCard(b, true)).join('');
-    }
+    // Render filter tabs with live counts
+    var curTab = S.hostBookingTab || (pCount > 0 ? 'pending' : 'all');
+    S.hostBookingTab = curTab;
+    $1('#hostFilterTabs').innerHTML = `
+      <button class="host-tab-btn ${curTab === 'pending' ? 'on' : ''}" data-act="filter-host-requests" data-tab="pending">Pending (${pCount})</button>
+      <button class="host-tab-btn ${curTab === 'approved' ? 'on' : ''}" data-act="filter-host-requests" data-tab="approved">Approved (${aCount})</button>
+      <button class="host-tab-btn ${curTab === 'all' ? 'on' : ''}" data-act="filter-host-requests" data-tab="all">All (${S.bookings.length})</button>
+    `;
+
+    renderHostRequestsFeed();
 
     var kf = $1('#hostKitchensFeed');
     if (!S.kitchens.length) {
@@ -1060,20 +1074,74 @@ async function renderHostView() {
         </div>
       `;
     } else {
-      kf.innerHTML = S.kitchens.map(k => `
-        <div class="card">
-          <div class="row">
-            <b class="kt" style="font-size:18px">${esc(k.name)}</b>
-            ${B(k.verification_status, k.verification_status === 'verified' ? 'Verified License' : 'Pending Review')}
+      kf.innerHTML = S.kitchens.map(k => {
+        var licStr = esc(k.license_info || 'MOH Licensed');
+        if (k.verification_status === 'verified') {
+          licStr = licStr.replace(/\s*·\s*submitted for review/i, '').replace(/submitted for review/i, '').trim();
+        }
+        var openSlots = (S.slots || []).filter(s => s.kitchen_id === k.id && s.status === 'open');
+        var openCount = openSlots.length;
+        var slotBadgeClass = openCount > 0 ? 'approved' : 'pending';
+        var slotBadgeText = openCount > 0 ? `${openCount} open shift${openCount > 1 ? 's' : ''}` : '0 open slots';
+
+        return `
+          <div class="card host-kitchen-card">
+            <div class="row" style="align-items:flex-start">
+              <div>
+                <b class="kt" style="font-size:18px">${esc(k.name)}</b>
+                <div class="muted" style="margin:4px 0 0;font-size:13px">${ICONS.pin} ${esc(k.address)}</div>
+              </div>
+              <div style="text-align:right">
+                ${B(k.verification_status, k.verification_status === 'verified' ? 'Verified License' : 'Pending Review')}
+              </div>
+            </div>
+            <div class="muted" style="margin:8px 0;font-size:13px">
+              Rate: <b>${fmt(k.hourly_rate)} / hr</b> · License: <b>${licStr}</b>
+            </div>
+            <div class="host-kitchen-actions">
+              <div style="display:flex;gap:8px;align-items:center">
+                <span class="badge ${slotBadgeClass}">${slotBadgeText}</span>
+                ${openCount === 0 ? '<span class="muted" style="font-size:12px">Add availability so chefs can book shifts</span>' : ''}
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn-slot-shortcut" data-act="modal-slot" data-kitchen-id="${k.id}">+ Add Shift Slot</button>
+              </div>
+            </div>
           </div>
-          <div class="muted" style="margin:4px 0">${ICONS.pin} ${esc(k.address)}</div>
-          <div class="muted">Rate: <b>${fmt(k.hourly_rate)} / hr</b> · License: ${esc(k.license_info)}</div>
-        </div>
-      `).join('');
+        `;
+      }).join('');
     }
 
   } catch(err) {
     toast(err.message);
+  }
+}
+
+function renderHostRequestsFeed() {
+  var rf = $1('#hostRequestsFeed');
+  if (!rf) return;
+  var curTab = S.hostBookingTab || 'all';
+  var list = S.bookings || [];
+  if (curTab === 'pending') {
+    list = list.filter(b => b.status === 'pending');
+  } else if (curTab === 'approved') {
+    list = list.filter(b => b.status === 'approved');
+  }
+
+  // Sync button classes
+  $$('.host-tab-btn').forEach(btn => {
+    btn.classList.toggle('on', btn.dataset.tab === curTab);
+  });
+
+  if (!list.length) {
+    var emptyMsg = curTab === 'pending'
+      ? 'No pending booking requests from chefs right now.'
+      : curTab === 'approved'
+      ? 'No approved shifts scheduled yet.'
+      : 'No booking requests from chefs yet.';
+    rf.innerHTML = `<div class="card empty"><p class="muted">${emptyMsg}</p></div>`;
+  } else {
+    rf.innerHTML = list.map(b => bCard(b, true)).join('');
   }
 }
 
@@ -1190,21 +1258,31 @@ function renderLoginView() {
 
 function bCard(b, isHost) {
   var s = by(S.slots, b.slot_id) || { start_time: b.start_time, end_time: b.end_time };
-  var kName = b.kitchen_name || (by(S.kitchens, s.kitchen_id) || {}).name || 'Kitchen Space';
+  var kName = b.kitchen_name || (by(S.kitchens, s.kitchen_id || b.kitchen_id) || {}).name || 'Commercial Kitchen Space';
   var num = b.booking_no ? '#' + b.booking_no : '#' + (b.id || '').slice(0, 6);
-  var chefLabel = b.chef_name || b.chef || 'Chef';
+  var chefLabel = (b.chef_name || b.chef || 'Chef').replace(/^chef\s+/i, '');
+  var hrs = slotHours(s);
+  var rate = Number(b.hourly_rate || (by(S.kitchens, b.kitchen_id || s.kitchen_id) || {}).hourly_rate || 300);
+  var totalPayout = hrs * rate;
 
   return `
-    <div class="card">
-      <div class="row">
-        <b>Booking ${num}</b>
+    <div class="card booking-card">
+      <div class="row" style="align-items:center">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <b style="font-size:16px">Booking ${num}</b>
+          <span class="booking-payout-pill">${hrs} hrs × ${rate} EGP = <b>${fmt(totalPayout)}</b></span>
+        </div>
         ${B(b.status)}
       </div>
-      <div class="muted" style="margin:4px 0">${isHost ? ICONS.chef + ' Guest Chef: ' + esc(chefLabel) + ' · ' : ''}${ICONS.pin} ${esc(kName)}</div>
-      <div>${ICONS.cal} ${fmtSlot(s)}</div>
+      <div class="muted" style="margin:8px 0 4px;font-size:13px">
+        ${isHost ? `${ICONS.chef} <b>Chef ${esc(chefLabel)}</b> · ` : ''}${ICONS.pin} ${esc(kName)}
+      </div>
+      <div style="font-size:14px;color:var(--text);margin-top:2px">
+        ${ICONS.cal} <b>${fmtSlot(s)}</b> <span class="muted">(${hrs}-hour prep block)</span>
+      </div>
       ${isHost && b.status === 'pending' ? `
-        <div class="row act" style="margin-top:12px">
-          <button data-act="approve" data-id="${b.id}">Approve Request</button>
+        <div class="row act" style="margin-top:14px;gap:8px">
+          <button data-act="approve" data-id="${b.id}" style="background:#10b981;border-color:#10b981;color:#fff;font-weight:700">Approve Request</button>
           <button class="bad" data-act="decline" data-id="${b.id}">Decline</button>
         </div>
       ` : ''}
@@ -1490,28 +1568,45 @@ document.addEventListener('click', async e => {
       toast('Please list a kitchen before scheduling availability slots.');
       return;
     }
+    var preselectedKitchenId = b.dataset.kitchenId || (kitchens[0] ? kitchens[0].id : '');
+
+    // Default to tomorrow 10:00 to 14:00 (clean top-of-hour block)
+    var d = new Date();
+    d.setDate(d.getDate() + 1);
+    var yyyy = d.getFullYear();
+    var mm = String(d.getMonth() + 1).padStart(2, '0');
+    var dd = String(d.getDate()).padStart(2, '0');
+    var defStart = `${yyyy}-${mm}-${dd}T10:00`;
+    var defEnd = `${yyyy}-${mm}-${dd}T14:00`;
+
     openModal('Add Availability Shift Slot', `
       <form class="card" novalidate data-form="slot" style="border:none;box-shadow:none;padding:0;margin:0">
         <label>Select Commercial Kitchen</label>
         <select name="kitchen_id">
-          ${kitchens.map(k => '<option value="' + k.id + '">' + esc(k.name) + '</option>').join('')}
+          ${kitchens.map(k => '<option value="' + k.id + '"' + (k.id === preselectedKitchenId ? ' selected' : '') + '>' + esc(k.name) + '</option>').join('')}
         </select>
 
         <div class="grid2">
           <div>
-            <label>Start Time</label>
-            <input name="start_time" type="datetime-local" required>
+            <label>Start Time (Shift Start)</label>
+            <input name="start_time" type="datetime-local" value="${defStart}" required>
           </div>
           <div>
-            <label>End Time</label>
-            <input name="end_time" type="datetime-local" required>
+            <label>End Time (Shift End)</label>
+            <input name="end_time" type="datetime-local" value="${defEnd}" required>
           </div>
         </div>
 
         <div class="msg err" role="alert" hidden></div>
-        <button type="submit" style="width:100%;margin-top:10px">Publish Availability Slot</button>
+        <button type="submit" style="width:100%;margin-top:14px">Publish Availability Slot</button>
       </form>
     `);
+    return;
+  }
+
+  if (a === 'filter-host-requests') {
+    S.hostBookingTab = b.dataset.tab;
+    renderHostRequestsFeed();
     return;
   }
 
@@ -1575,19 +1670,19 @@ document.addEventListener('click', async e => {
       closeModal();
       route();
     } else if (a === 'approve' && role() === 'host') {
-      await api('PATCH', '/bookings/' + id + '/status', { status: 'approved' });
+      await api('PATCH', '/bookings/' + id + '/approve');
       toast('Chef booking approved!');
       route();
     } else if (a === 'decline' && role() === 'host') {
-      await api('PATCH', '/bookings/' + id + '/status', { status: 'declined' });
+      await api('PATCH', '/bookings/' + id + '/decline');
       toast('Booking declined.');
       route();
     } else if (a === 'verify' && role() === 'admin') {
-      await api('PATCH', '/kitchens/' + id + '/verify', { status: 'verified' });
+      await api('PATCH', '/kitchens/' + id + '/verify');
       toast('Commercial license approved!');
       route();
     } else if (a === 'reject' && role() === 'admin') {
-      await api('PATCH', '/kitchens/' + id + '/verify', { status: 'rejected' });
+      await api('PATCH', '/kitchens/' + id + '/reject');
       toast('License rejected.');
       route();
     }
