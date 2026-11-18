@@ -121,7 +121,7 @@ body {
 }
 
 /* ── Top Navigation Bar ── */
-nav {
+#topNav {
   position: sticky;
   top: 0;
   z-index: 40;
@@ -2112,6 +2112,7 @@ body.locked { overflow: hidden; }
   .mobile-bottom-nav {
     display: flex !important;
     position: fixed !important;
+    top: auto !important;
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
@@ -2124,6 +2125,7 @@ body.locked { overflow: hidden; }
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
     border-top: 1px solid var(--line) !important;
+    border-bottom: none !important;
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4) !important;
     align-items: center !important;
     justify-content: space-around !important;
