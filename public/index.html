@@ -75,20 +75,19 @@
   <!-- Modal Container for Clean Creation Flows -->
   <div id="modalContainer" hidden></div>
 
-  <!-- Reviewer & Staging Drawer (Discreet floating role tester for portfolio reviewers) -->
-  <aside id="demoDrawer" class="demo-drawer">
-    <div class="demo-drawer-bar">
-      <div class="demo-drawer-label">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-        <span>Reviewer Persona Switcher</span>
-      </div>
-      <div class="demo-drawer-roles">
-        <button class="demo-role-btn" data-act="demo" data-role="attendee" title="Experience app as Dinner Guest">🍽️ Diner</button>
-        <button class="demo-role-btn" data-act="demo" data-role="chef" title="Experience app as Guest Chef">🧑‍🍳 Chef</button>
-        <button class="demo-role-btn" data-act="demo" data-role="host" title="Experience app as Commercial Kitchen Host">🏢 Kitchen Host</button>
-        <button class="demo-role-btn" data-act="demo" data-role="admin" title="Experience app as Platform Administrator">🛡️ Admin</button>
-      </div>
-      <button class="demo-drawer-toggle" id="demoToggle" title="Minimize / Expand reviewer controls">✕</button>
+  <!-- Reviewer & Staging Drawer (Discreet floating corner pill) -->
+  <aside id="demoDrawer" class="demo-drawer minimized">
+    <button type="button" class="demo-drawer-pill" id="demoToggle" aria-label="Toggle demo tester persona">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span>Tester Mode</span>
+      <span class="demo-arrow">▲</span>
+    </button>
+    <div class="demo-drawer-roles">
+      <button type="button" class="demo-role-btn" data-act="demo" data-role="attendee" title="Experience app as Dinner Guest">Diner</button>
+      <button type="button" class="demo-role-btn" data-act="demo" data-role="chef" title="Experience app as Guest Chef">Chef</button>
+      <button type="button" class="demo-role-btn" data-act="demo" data-role="host" title="Experience app as Commercial Kitchen Host">Host</button>
+      <button type="button" class="demo-role-btn" data-act="demo" data-role="admin" title="Experience app as Platform Administrator">Admin</button>
+      <button type="button" class="demo-close-btn" data-act="close-demo" title="Minimize tester pill">✕</button>
     </div>
   </aside>
 

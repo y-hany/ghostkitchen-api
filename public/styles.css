@@ -131,6 +131,7 @@ nav {
 }
 
 .brand {
+  color: var(--accent);
   text-decoration: none;
   white-space: nowrap;
   display: inline-flex;
@@ -139,6 +140,10 @@ nav {
   transition: transform .15s ease;
 }
 .brand:hover { transform: scale(1.015); }
+.brand .ico-svg {
+  color: var(--accent);
+  stroke: var(--accent);
+}
 .brand-text {
   display: flex;
   flex-direction: column;
@@ -196,8 +201,10 @@ nav {
 .role-chip {
   font-size: 12.5px;
   font-weight: 700;
-  padding: 7px 14px;
-  border-radius: 99px;
+  height: 36px;
+  line-height: 36px;
+  padding: 0 14px;
+  border-radius: 999px;
   background: var(--accent-l);
   color: var(--accent-d);
   text-decoration: none;
@@ -207,6 +214,8 @@ nav {
   transition: all .2s ease;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   gap: 6px;
 }
 .role-chip:hover {
@@ -227,6 +236,7 @@ nav {
   color: var(--text);
   width: 36px;
   height: 36px;
+  box-sizing: border-box;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -235,6 +245,7 @@ nav {
   padding: 0;
   box-shadow: var(--sh-sm);
   transition: all .2s ease;
+  flex-shrink: 0;
 }
 .theme-btn:hover {
   background: var(--accent-l);
@@ -264,11 +275,11 @@ nav {
 /* ── Search Bar & Filter Chips ── */
 .search-box {
   position: relative;
-  margin: 18px 0 12px;
+  margin: 14px 0 12px;
 }
 .search-ico {
   position: absolute;
-  left: 14px;
+  left: 15px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--muted);
@@ -277,20 +288,25 @@ nav {
 .search-input,
 .search-box input[type="search"] {
   width: 100%;
-  padding: 12px 16px 12px 42px;
-  background: var(--card);
+  padding: 13px 18px 13px 44px;
+  background: var(--card-subtle);
   border: 1.5px solid var(--line);
-  border-radius: 14px;
+  border-radius: 12px;
   font-size: 14.5px;
   color: var(--text);
-  box-shadow: var(--sh-sm);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
   outline: none;
-  transition: border-color .2s, box-shadow .2s;
+  transition: all .2s ease;
   font-family: inherit;
+}
+.search-box input[type="search"]::placeholder {
+  color: var(--muted);
+  opacity: 0.85;
 }
 .search-box input[type="search"]:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  background: var(--card);
+  box-shadow: 0 0 0 3px var(--accent-glow), 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 .filter-row {
@@ -1062,12 +1078,17 @@ body.locked { overflow: hidden; }
   border: none;
   font-size: 13px;
   font-weight: 700;
-  padding: 8px 16px;
-  border-radius: 99px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  border-radius: 999px;
   cursor: pointer;
   text-decoration: none;
   transition: all .2s ease;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .nav-cta:hover {
   background: var(--accent-h);
@@ -1082,12 +1103,17 @@ body.locked { overflow: hidden; }
   background: transparent;
   border: 1px solid var(--line);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 99px;
+  height: 36px;
+  box-sizing: border-box;
+  padding: 0 14px;
+  border-radius: 999px;
   cursor: pointer;
   transition: all .15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 .logout-btn:hover {
   background: var(--bad-bg);
@@ -1280,16 +1306,26 @@ body.locked { overflow: hidden; }
 }
 
 /* ── Dashboard Headers with Primary CTA ── */
+#appView {
+  padding-bottom: 96px;
+}
 .dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 .dashboard-title-area h1 {
   margin: 0 0 6px;
+}
+.dashboard-title-area p.sub,
+.hero p {
+  max-width: 58ch;
+  line-height: 1.55;
+  color: var(--muted);
+  margin-top: 4px;
 }
 .btn-primary-action {
   background: var(--accent);
@@ -1311,46 +1347,52 @@ body.locked { overflow: hidden; }
   transform: translateY(-1px);
 }
 
-/* ── Reviewer & Staging Drawer ── */
+/* ── Reviewer & Staging Drawer (Floating Corner Pill) ── */
 .demo-drawer {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 20px;
+  right: 20px;
   z-index: 100;
   background: var(--card);
-  border-top: 1px solid var(--line);
-  padding: 8px 20px;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
-  transition: transform .3s ease;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  transition: all .25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .demo-drawer.minimized {
-  transform: translateY(calc(100% - 32px));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
-.demo-drawer-bar {
-  max-width: 900px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.demo-drawer-label {
-  font-size: 12px;
-  font-weight: 700;
+.demo-drawer-pill {
+  background: transparent;
+  border: none;
   color: var(--muted);
-  display: flex;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 16px;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  gap: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.demo-drawer-pill:hover {
+  color: var(--text);
+}
+.demo-drawer.minimized .demo-drawer-roles {
+  display: none;
+}
+.demo-drawer:not(.minimized) .demo-drawer-pill .demo-arrow {
+  display: none;
 }
 .demo-drawer-roles {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  padding: 4px 12px 4px 0;
 }
 .demo-role-btn {
   background: var(--card-subtle);
@@ -1358,7 +1400,7 @@ body.locked { overflow: hidden; }
   color: var(--text);
   font-size: 12px;
   font-weight: 600;
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 99px;
   cursor: pointer;
   transition: all .15s ease;
@@ -1372,26 +1414,57 @@ body.locked { overflow: hidden; }
   color: var(--on-accent);
   border-color: var(--accent);
 }
-.demo-drawer-toggle {
+.demo-close-btn {
   background: transparent;
   border: none;
   color: var(--muted);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: 50%;
+  line-height: 1;
 }
-.demo-drawer-toggle:hover {
+.demo-close-btn:hover {
   color: var(--text);
+  background: var(--card-subtle);
 }
 
-/* ── How It Works for Commercial Kitchens ── */
+/* ── How It Works for Commercial Kitchens (Collapsible & Symmetrical 4-Card Grid) ── */
+.hiw-toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card-subtle);
+  border: 1px solid var(--line);
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all .15s ease;
+}
+.hiw-toggle-pill:hover {
+  background: var(--accent-l);
+  border-color: var(--accent);
+}
+.hiw-chevron {
+  transition: transform .2s ease;
+}
+.hiw-toggle-pill.active .hiw-chevron {
+  transform: rotate(180deg);
+}
 .how-it-works {
   background: var(--card-subtle);
   border: 1px solid var(--line);
   border-radius: var(--r);
-  padding: 24px;
-  margin-bottom: 26px;
+  padding: 22px;
+  margin: 12px 0 20px;
+  animation: fadeIn .25s ease both;
+}
+.how-it-works.collapsed {
+  display: none !important;
 }
 .hiw-badge {
   display: inline-block;
@@ -1408,9 +1481,19 @@ body.locked { overflow: hidden; }
 }
 .hiw-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  margin-top: 18px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+@media (max-width: 860px) {
+  .hiw-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 500px) {
+  .hiw-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .hiw-step {
   background: var(--card);

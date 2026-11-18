@@ -235,9 +235,8 @@ function updateNav() {
     userAction.innerHTML = `<button class="nav-cta" data-act="open-cook-host">Cook or Host</button>`;
   } else if (r === 'attendee') {
     linksHtml = `
-      <a href="#events" class="${cur === 'events' ? 'on' : ''}">Supper Clubs</a>
-      <a href="#tickets" class="${cur === 'tickets' ? 'on' : ''}">My Reservations</a>
-      <a href="#kitchens" class="${cur === 'kitchens' ? 'on' : ''}">Kitchen Spaces</a>
+      <a href="#events" class="${cur === 'events' ? 'on' : ''}">Explore Supper Clubs</a>
+      <a href="#tickets" class="${cur === 'tickets' ? 'on' : ''}">My Passes</a>
     `;
     userAction.innerHTML = `
       <div class="user-menu">
@@ -418,12 +417,16 @@ async function renderKitchensView() {
       <div class="dashboard-title-area">
         <h1>Cairo Commercial Kitchen Spaces</h1>
         <p class="sub">Verified licensed commissary kitchens, bakery prep decks, and supper club venues available for hourly shift rental.</p>
+        <button type="button" class="hiw-toggle-pill" data-act="toggle-hiw">
+          <span>How shift rental works</span>
+          <svg class="hiw-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
       </div>
       ${role() === 'host' ? '<button class="btn-primary-action" data-act="modal-kitchen">+ List a Kitchen</button>' : ''}
     </div>
 
-    <!-- Educational "How Commercial Kitchen Rental Works" Section -->
-    <section class="how-it-works">
+    <!-- Educational "How Commercial Kitchen Rental Works" Section (Collapsible) -->
+    <section class="how-it-works collapsed" id="hiwSection">
       <div class="hiw-header">
         <span class="hiw-badge">How It Works for Chefs & Food Entrepreneurs</span>
         <h2>Flexible Commercial Shifts with Zero Long-term Lease</h2>
@@ -1217,8 +1220,25 @@ document.addEventListener('click', async e => {
   if (e.target.closest('#demoToggle')) {
     e.preventDefault();
     var d = $1('#demoDrawer');
-    d.classList.toggle('minimized');
-    $1('#demoToggle').textContent = d.classList.contains('minimized') ? '▲ Tester Mode' : '✕';
+    if (d) d.classList.toggle('minimized');
+    return;
+  }
+  if (e.target.closest('[data-act="close-demo"]')) {
+    e.preventDefault();
+    var d = $1('#demoDrawer');
+    if (d) d.classList.add('minimized');
+    return;
+  }
+
+  // Toggle "How shift rental works"
+  if (e.target.closest('[data-act="toggle-hiw"]')) {
+    e.preventDefault();
+    var hiw = $1('#hiwSection');
+    var btn = e.target.closest('[data-act="toggle-hiw"]');
+    if (hiw) {
+      hiw.classList.toggle('collapsed');
+      if (btn) btn.classList.toggle('active', !hiw.classList.contains('collapsed'));
+    }
     return;
   }
 
