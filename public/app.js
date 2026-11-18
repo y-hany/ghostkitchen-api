@@ -12,6 +12,7 @@ var DEMO_USERS = {
 };
 
 var DISTRICTS = ['All', 'Dokki', 'Zamalek', 'Maadi', 'Heliopolis', 'Garden City', 'New Cairo', 'Sheikh Zayed'];
+var DINER_DISTRICTS = ['All Cairo', 'Dokki', 'Zamalek', 'Maadi', 'New Cairo', 'Heliopolis'];
 var SETUPS = ['All Setups', 'Hot Cooking Line', 'Bakery Deck', 'Supper Club (Kitchen+Dining)', 'Cold Prep'];
 var RATES = ['All Rates', '< 300 EGP', '300–350 EGP', '350+ EGP'];
 var EQUIP = ['Walk-in chiller', 'Convection ovens', 'Gas range', 'Induction hobs'];
@@ -37,6 +38,27 @@ var $$ = s => [].slice.call(document.querySelectorAll(s));
 var fmt = n => Number(n || 0).toLocaleString('en-US') + ' EGP';
 var esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 var by = (a, id) => a.filter(x => x.id === id)[0];
+
+function formatMenu(desc) {
+  if (!desc) return '';
+  var raw = desc.split(/[•;\n]+/).map(s => s.trim()).filter(Boolean);
+  if (raw.length <= 1 && desc.indexOf(',') > -1) {
+    raw = desc.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  if (raw.length > 1) {
+    return `
+      <div class="menu-courses">
+        ${raw.map((item, idx) => `
+          <div class="menu-course-row">
+            <span class="course-num">Course ${idx + 1}</span>
+            <span class="course-name">${esc(item)}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+  return `<p class="menu" style="margin:8px 0 14px;color:var(--text);font-size:14.5px">${esc(desc)}</p>`;
+}
 
 // ── VECTOR SVG ICONS ────────────────────────────────────────────────────────
 var ICONS = {
@@ -234,9 +256,11 @@ function updateNav() {
     `;
     userAction.innerHTML = `<button class="nav-cta" data-act="open-cook-host">Cook or Host</button>`;
   } else if (r === 'attendee') {
+    var ticketCount = (S.tickets || []).length;
+    var badgeHtml = ticketCount > 0 ? `<span class="nav-count-badge">${ticketCount}</span>` : '';
     linksHtml = `
       <a href="#events" class="${cur === 'events' ? 'on' : ''}">Explore Supper Clubs</a>
-      <a href="#tickets" class="${cur === 'tickets' ? 'on' : ''}">My Passes</a>
+      <a href="#tickets" class="${cur === 'tickets' ? 'on' : ''}">My Passes${badgeHtml}</a>
     `;
     userAction.innerHTML = `
       <div class="user-menu">
@@ -326,87 +350,132 @@ async function renderEventsView() {
         <div class="trust-icon">${ICONS.ticket}</div>
         <div>
           <div class="trust-title">Intimate Seating</div>
-          <div class="trust-sub">Secret locations revealed upon confirmed booking</div>
+          <div class="trust-sub">Exact street addresses revealed upon confirmed booking</div>
         </div>
       </div>
     </div>
 
-    <h2>Upcoming Pop-up Dinners</h2>
+    <div class="diner-filters">
+      <h2 style="margin:0;font-size:20px">Upcoming Pop-up Dinners</h2>
+      <div id="dinerDistrictChips" class="diner-district-chips"></div>
+    </div>
+
     <div id="eventGrid">${skeletonCards(2)}</div>
   `;
 
+  updateDinerFiltersUI();
+
   try {
-    var data = await api('GET', '/events');
-    var events = data.events || [];
-    var grid = $1('#eventGrid');
-    if (!grid) return;
-
-    if (!events.length) {
-      grid.innerHTML = `
-        <div class="card empty" style="text-align:center;padding:40px 20px">
-          <div style="font-size:36px;margin-bottom:12px">🍽️</div>
-          <h2>No Upcoming Pop-ups Published Yet</h2>
-          <p class="muted" style="max-width:440px;margin:0 auto 16px">Guest chefs post pop-up supper clubs once their commercial kitchen slots are approved.</p>
-          ${role() === 'chef' ? '<button class="nav-cta" data-act="modal-event">+ Host a Pop-up Dinner</button>' : '<a class="btn" href="#kitchens">Browse Commercial Kitchens</a>'}
-        </div>
-      `;
-      return;
+    var fetches = [api('GET', '/events')];
+    if (role() === 'attendee') {
+      fetches.push(api('GET', '/tickets'));
     }
-
-    grid.innerHTML = events.map(ev => {
-      var left = ev.seats_left != null ? ev.seats_left : ev.capacity;
-      var total = ev.capacity || 20;
-      var pct = Math.max(0, Math.min(100, Math.round(((total - left) / total) * 100)));
-      var photo = hashPhoto(ev.title || ev.id, EVENT_PHOTOS);
-      var dateStr = ev.starts_at ? new Date(ev.starts_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Upcoming Date';
-      var f = flash && flash.id === ev.id;
-
-      return `
-        <div class="card lift">
-          <div class="card-media">
-            <img class="card-img" src="${photo}" alt="${esc(ev.title)}" loading="lazy">
-            <div class="card-badge-top">${left > 5 ? left + ' seats left' : left > 0 ? 'Only ' + left + ' left' : 'Sold out'}</div>
-            <div class="card-badge-bottom">${ICONS.pin} Secret Location · ${esc((ev.address || '').split(',')[1] || 'Cairo')}</div>
-          </div>
-          
-          <div class="row">
-            <b class="kt" style="font-size:20px">${esc(ev.title)}</b>
-            <div class="price" style="font-size:20px">${fmt(ev.ticket_price)} <span class="muted" style="font-size:13px">/ seat</span></div>
-          </div>
-
-          <div class="muted" style="margin:6px 0 10px">${ICONS.chef} Hosted by Chef ${esc(ev.chef_name)} · ${ICONS.cal} ${dateStr}</div>
-
-          <div class="seat-progress-bar" title="${total - left} of ${total} seats booked">
-            <div class="seat-progress-fill" style="width:${100 - pct}%"></div>
-          </div>
-
-          <p class="menu" style="margin:8px 0 14px;color:var(--text);font-size:14.5px">${esc(ev.menu_description)}</p>
-
-          <form novalidate data-form="reserve" data-id="${ev.id}" data-price="${ev.ticket_price}" data-left="${left}">
-            <input type="hidden" name="event_id" value="${ev.id}">
-            <div class="row" style="align-items:flex-end;margin-bottom:12px">
-              <div style="flex:1">
-                <label style="font-size:12.5px;font-weight:700">Reserve Seats ${role() !== 'guest' ? '<span class="muted">(as ' + esc(me().split(' ')[0]) + ')</span>' : ''}</label>
-                <input name="quantity" type="number" inputmode="numeric" min="1" max="${left}" value="${left ? '1' : '0'}" placeholder="Seats (e.g. 2)" ${left ? '' : 'disabled'} style="margin:0">
-              </div>
-              <div style="text-align:right;padding-bottom:10px">
-                <span class="muted" style="font-size:12px">Total:</span> <b class="price total">${fmt(left ? ev.ticket_price : 0)}</b>
-              </div>
-            </div>
-            <div class="msg err" role="alert" hidden></div>
-            ${f ? '<div class="msg ok" role="status"><b>Reservation Confirmed!</b> ' + esc(flash.text) + ' <a href="#tickets">View My Tickets</a></div>' : ''}
-            <button type="submit" style="width:100%" ${left ? '' : 'disabled'}>${left ? 'Reserve Pop-up Seats' : 'Sold Out'}</button>
-          </form>
-        </div>
-      `;
-    }).join('');
-
-    flash = null; // Clear flash banner after rendering
-
+    var [eData, tData] = await Promise.all(fetches);
+    S.events = eData.events || [];
+    if (tData && tData.tickets) {
+      S.tickets = tData.tickets;
+      updateNav();
+    }
+    renderFilteredEvents();
   } catch(err) {
     var g = $1('#eventGrid');
     if (g) g.innerHTML = '<div class="card empty"><p>Unable to load supper clubs at this moment.</p></div>';
   }
+}
+
+function updateDinerFiltersUI() {
+  var el = $1('#dinerDistrictChips');
+  if (!el) return;
+  el.innerHTML = DINER_DISTRICTS.map(d =>
+    `<button type="button" class="district-chip${(S.dinerDistrict || 'All Cairo') === d ? ' on' : ''}" data-act="diner-district" data-district="${d}">${d}</button>`
+  ).join('');
+}
+
+function renderFilteredEvents() {
+  var grid = $1('#eventGrid');
+  if (!grid) return;
+
+  var events = S.events || [];
+  var dFilter = S.dinerDistrict || 'All Cairo';
+
+  var filtered = events.filter(ev => {
+    if (dFilter !== 'All Cairo') {
+      var addr = ((ev.address || '') + ' ' + (ev.kitchen_name || '')).toLowerCase();
+      if (addr.indexOf(dFilter.toLowerCase()) === -1) return false;
+    }
+    return true;
+  });
+
+  if (!filtered.length) {
+    grid.innerHTML = `
+      <div class="card empty" style="text-align:center;padding:40px 20px;grid-column: 1 / -1;">
+        <div style="font-size:36px;margin-bottom:12px">🍽️</div>
+        <h2>No Dinners Found in ${esc(dFilter)}</h2>
+        <p class="muted" style="max-width:440px;margin:0 auto 16px">Try switching districts or checking back as chefs publish new supper club dates.</p>
+        <button type="button" class="ghost" data-act="diner-district" data-district="All Cairo">Show All Cairo Dinners</button>
+      </div>
+    `;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(ev => {
+    var left = ev.seats_left != null ? ev.seats_left : ev.capacity;
+    var total = ev.capacity || 20;
+    var sold = total - left;
+    var pct = Math.max(0, Math.min(100, Math.round((sold / total) * 100)));
+    var photo = hashPhoto(ev.title || ev.id, EVENT_PHOTOS);
+    var dateStr = ev.starts_at ? new Date(ev.starts_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Upcoming Date';
+    var f = flash && flash.id === ev.id;
+    var cleanChef = (ev.chef_name || 'Guest Chef').replace(/^chef\s+/i, '').trim();
+    var district = (ev.address || '').split(',')[1] || (ev.kitchen_name || '').split('–')[1] || 'Dokki';
+
+    return `
+      <div class="card lift">
+        <div class="card-media">
+          <img class="card-img" src="${photo}" alt="${esc(ev.title)}" loading="lazy">
+          <div class="card-badge-top">${left > 5 ? left + ' seats left' : left > 0 ? 'Only ' + left + ' left' : 'Sold out'}</div>
+          <div class="card-badge-bottom">${ICONS.pin} Secret Venue · ${esc(district.trim())}</div>
+        </div>
+        
+        <div class="row" style="margin-bottom:4px">
+          <b class="kt" style="font-size:19px">${esc(ev.title)}</b>
+          <div class="price" style="font-size:19px">${fmt(ev.ticket_price)} <span class="muted" style="font-size:12px">/ seat</span></div>
+        </div>
+
+        <div class="muted" style="margin:4px 0 10px;font-size:13px">${ICONS.chef} Hosted by Chef ${esc(cleanChef)} · ${ICONS.cal} ${dateStr}</div>
+
+        <div class="seat-progress-area">
+          <div class="seat-progress-info">
+            <span class="seat-claimed-label"><b>${sold}</b> of ${total} seats claimed</span>
+            <span class="seat-left-pct">${pct}% claimed</span>
+          </div>
+          <div class="seat-progress-bar" title="${sold} of ${total} seats claimed">
+            <div class="seat-progress-fill" style="width:${pct}%"></div>
+          </div>
+        </div>
+
+        ${formatMenu(ev.menu_description)}
+
+        <form novalidate data-form="reserve" data-id="${ev.id}" data-price="${ev.ticket_price}" data-left="${left}">
+          <input type="hidden" name="event_id" value="${ev.id}">
+          <div class="msg err" role="alert" hidden></div>
+          ${f ? '<div class="msg ok" role="status"><b>Reservation Confirmed!</b> ' + esc(flash.text) + ' <a href="#tickets">View My Tickets</a></div>' : ''}
+          <div class="booking-row">
+            <div class="stepper-box">
+              <button type="button" class="stepper-btn" data-act="step-down" disabled>−</button>
+              <input name="quantity" class="stepper-val" type="number" min="1" max="${left}" value="${left ? '1' : '0'}" readonly>
+              <button type="button" class="stepper-btn" data-act="step-up" ${left > 1 ? '' : 'disabled'}>+</button>
+            </div>
+            <button type="submit" class="btn-reserve" ${left ? '' : 'disabled'}>
+              ${left ? `Reserve Pop-up Seats · <span class="total">${fmt(ev.ticket_price)}</span>` : 'Sold Out'}
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+  }).join('');
+
+  flash = null; // Clear flash banner after rendering
 }
 
 // ── VIEW 2: COMMERCIAL KITCHENS MARKETPLACE ─────────────────────────────────
@@ -1276,6 +1345,33 @@ document.addEventListener('click', async e => {
         toast('Demo switch failed: ' + err.message);
       }
     }
+    return;
+  }
+
+  // Diner District Filter
+  if (a === 'diner-district') {
+    S.dinerDistrict = b.dataset.district;
+    updateDinerFiltersUI();
+    renderFilteredEvents();
+    return;
+  }
+
+  // Seat Stepper
+  if (a === 'step-down' || a === 'step-up') {
+    var stepForm = b.closest('form');
+    if (!stepForm) return;
+    var inp = stepForm.querySelector('.stepper-val');
+    var val = parseInt(inp.value, 10) || 1;
+    var max = parseInt(inp.max, 10) || 1;
+    if (a === 'step-down' && val > 1) val--;
+    if (a === 'step-up' && val < max) val++;
+    inp.value = val;
+    var btnDown = stepForm.querySelector('[data-act="step-down"]');
+    var btnUp = stepForm.querySelector('[data-act="step-up"]');
+    if (btnDown) btnDown.disabled = val <= 1;
+    if (btnUp) btnUp.disabled = val >= max;
+    var tot = stepForm.querySelector('.total');
+    if (tot) tot.textContent = fmt(val * (+stepForm.dataset.price || 0));
     return;
   }
 

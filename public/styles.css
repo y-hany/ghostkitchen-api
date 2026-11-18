@@ -342,12 +342,59 @@ nav {
   color: var(--on-accent);
 }
 
+/* ── Diner Supper Club Event Grid & Cards ── */
+#eventGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+}
+@media (max-width: 680px) {
+  #eventGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.diner-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 18px;
+  flex-wrap: wrap;
+}
+.diner-district-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.seat-progress-area {
+  margin: 8px 0 12px;
+}
+.seat-progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 5px;
+}
+.seat-claimed-label {
+  color: var(--muted);
+}
+.seat-claimed-label b {
+  color: var(--text);
+}
+.seat-left-pct {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 11.5px;
+}
 .seat-progress-bar {
   height: 6px;
   background: var(--line);
   border-radius: 99px;
   overflow: hidden;
-  margin: 8px 0 14px;
+  margin: 0;
 }
 .seat-progress-fill {
   height: 100%;
@@ -356,11 +403,137 @@ nav {
   transition: width .3s ease;
 }
 
+/* Multi-Course Tasting Menu Preview */
+.menu-courses {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 14px;
+  background: var(--card-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+}
+.menu-course-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.course-num {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  min-width: 62px;
+  flex-shrink: 0;
+  font-family: ui-monospace, "SF Mono", monospace;
+}
+.course-name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Compact Reservation Stepper Footer */
+.booking-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.stepper-box {
+  display: inline-flex;
+  align-items: center;
+  background: var(--card-subtle);
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  height: 42px;
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+.stepper-btn {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 700;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.stepper-btn:hover:not(:disabled) {
+  background: var(--card);
+  color: var(--accent);
+}
+.stepper-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.stepper-val {
+  width: 28px;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--text);
+  padding: 0;
+  outline: none;
+  font-family: inherit;
+  pointer-events: none;
+}
+.btn-reserve {
+  flex: 1;
+  height: 42px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 0 18px;
+}
+.btn-reserve:hover:not(:disabled) {
+  background: var(--accent-h);
+  transform: translateY(-1px);
+}
+.btn-reserve:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.nav-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 10.5px;
+  font-weight: 800;
+  border-radius: 99px;
+  padding: 1px 6px;
+  line-height: 1;
+  margin-left: 4px;
+}
+
 /* ── Layout & Typography ── */
 main {
-  max-width: 740px;
+  max-width: 860px;
   margin: 0 auto;
-  padding: 28px 20px 60px;
+  padding: 24px 20px 96px;
 }
 
 main[data-page]:not([hidden]) {
