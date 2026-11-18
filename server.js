@@ -56,7 +56,7 @@ if (process.env.VERCEL !== '1') {
   const PORT = parseInt(process.env.PORT, 10) || 3000;
   app.listen(PORT, () => {
     console.log(`GhostKitchen API listening on port ${PORT}`);
-    console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
+    console.log('CORS enabled for all origins');
   });
 }
 

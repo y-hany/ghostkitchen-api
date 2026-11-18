@@ -82,7 +82,12 @@ var ICONS = {
   navAdmin: '<svg class="nav-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>',
   navLogin: '<svg class="nav-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>',
   sun: '<svg class="theme-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>',
-  moon: '<svg class="theme-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+  moon: '<svg class="theme-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
+  heartOutline: '<svg class="inline-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+  heartFilled: '<svg class="inline-ico" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+  star: '<svg class="inline-ico" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  share: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>',
+  qr: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'
 };
 
 // ── THEME MANAGER ───────────────────────────────────────────────────────────
@@ -176,17 +181,84 @@ function saveSession() {
 var role = () => S.session ? S.session.role : 'guest';
 var me = () => S.session ? S.session.name : 'Guest';
 
-function toast(m){
+function toast(m, type){
   var t = $1('#toast');
   if(!t){
     t = document.createElement('div');
     t.id = 'toast';
     document.body.appendChild(t);
   }
-  t.textContent = m;
-  t.className = 'show';
+  var isErr = type === 'err' || /error|failed|invalid|denied|cannot/i.test(m);
+  var icon = isErr
+    ? '<svg class="toast-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+    : '<svg class="toast-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+  t.innerHTML = icon + '<span>' + esc(m) + '</span>';
+  t.className = 'show' + (isErr ? ' err' : '');
   clearTimeout(t._h);
-  t._h = setTimeout(() => t.className = '', 3200);
+  t._h = setTimeout(() => t.className = '', 3400);
+}
+
+function getSaved(type) {
+  try {
+    return JSON.parse(localStorage.getItem('gk_saved_' + type)) || [];
+  } catch(e) { return []; }
+}
+
+function isSaved(type, id) {
+  return getSaved(type).indexOf(id) > -1;
+}
+
+function toggleSaved(type, id) {
+  var list = getSaved(type);
+  var idx = list.indexOf(id);
+  var added = false;
+  if (idx > -1) {
+    list.splice(idx, 1);
+  } else {
+    list.push(id);
+    added = true;
+  }
+  localStorage.setItem('gk_saved_' + type, JSON.stringify(list));
+  return added;
+}
+
+function formatCountdown(dateStr) {
+  if (!dateStr) return '';
+  var target = new Date(dateStr);
+  var now = new Date();
+  var diffMs = target - now;
+  if (diffMs <= 0) return 'Happening now';
+  var diffHours = Math.floor(diffMs / 36e5);
+  var diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 0) {
+    return diffHours <= 1 ? 'Starts in < 1 hr' : `Starts in ${diffHours} hrs`;
+  }
+  if (diffDays === 1) {
+    return `Tomorrow at ${target.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+  return `In ${diffDays} days (${target.toLocaleDateString('en-GB', { weekday: 'short' })} ${target.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })})`;
+}
+
+function animateStats() {
+  $$('.stat b, .bn-g b').forEach(el => {
+    var raw = el.textContent.trim().replace(/,/g, '');
+    var target = parseInt(raw, 10);
+    if (isNaN(target) || target <= 0) return;
+    var duration = 400;
+    var startTime = null;
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      var progress = Math.min((timestamp - startTime) / duration, 1);
+      var cur = Math.floor(progress * target);
+      el.textContent = cur;
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        el.textContent = target;
+      }
+    }
+    requestAnimationFrame(step);
+  });
 }
 
 function B(st, txt){
@@ -234,6 +306,7 @@ function openModal(title, contentHtml) {
   var m = $1('#modalContainer');
   m.innerHTML = `
     <div class="modal-box" role="dialog" aria-modal="true">
+      <div class="modal-drag-handle"></div>
       <div class="modal-header">
         <h3 class="modal-title">${esc(title)}</h3>
         <button class="modal-close" data-act="modal-close" aria-label="Close dialog">✕</button>
@@ -243,6 +316,42 @@ function openModal(title, contentHtml) {
   `;
   m.hidden = false;
   document.body.classList.add('locked');
+}
+
+function openQRModal(refNo, title, chef, addr, qty) {
+  openModal(`Admission Pass #T-${refNo}`, `
+    <div class="qr-fullscreen-modal">
+      <h3 style="margin:0 0 4px;font-size:18px">${esc(title)}</h3>
+      <div class="muted" style="font-size:13px">${ICONS.chef} Hosted by Chef ${esc(chef)} · ${qty} Reserved Seat${qty > 1 ? 's' : ''}</div>
+      
+      <svg viewBox="0 0 100 100" width="180" height="180">
+        <rect width="100" height="100" fill="#fff"/>
+        <rect x="10" y="10" width="24" height="24" fill="#111"/>
+        <rect x="14" y="14" width="16" height="16" fill="#fff"/>
+        <rect x="18" y="18" width="8" height="8" fill="#111"/>
+        <rect x="66" y="10" width="24" height="24" fill="#111"/>
+        <rect x="70" y="14" width="16" height="16" fill="#fff"/>
+        <rect x="74" y="18" width="8" height="8" fill="#111"/>
+        <rect x="10" y="66" width="24" height="24" fill="#111"/>
+        <rect x="14" y="70" width="16" height="16" fill="#fff"/>
+        <rect x="18" y="74" width="8" height="8" fill="#111"/>
+        <rect x="42" y="14" width="8" height="8" fill="#111"/>
+        <rect x="54" y="24" width="8" height="8" fill="#111"/>
+        <rect x="42" y="42" width="16" height="16" fill="#111"/>
+        <rect x="66" y="46" width="8" height="16" fill="#111"/>
+        <rect x="78" y="66" width="12" height="8" fill="#111"/>
+        <rect x="46" y="68" width="12" height="18" fill="#111"/>
+        <rect x="66" y="78" width="20" height="8" fill="#111"/>
+      </svg>
+
+      <div style="background:var(--card-subtle);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:12px 0;text-align:left">
+        <div style="font-size:11px;color:var(--accent);font-weight:700">DOOR FAST-TRACK ADMISSION</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-top:2px">${ICONS.pin} ${esc(addr)}</div>
+        <div class="muted" style="font-size:12px;margin-top:2px">Present this screen to the host chef at the entrance for instant check-in.</div>
+      </div>
+      <button class="nav-cta" data-act="modal-close" style="width:100%">Close Pass</button>
+    </div>
+  `);
 }
 
 function closeModal() {
@@ -381,6 +490,22 @@ async function renderEventsView() {
       </div>
     </div>
 
+    <!-- Supper Clubs Toolbar: Real-time Search & Sort -->
+    <div class="events-toolbar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="search-ico"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="evSearch" placeholder="Search by chef, menu, dish, or district..." value="${esc(S.eventSearchQuery || '')}" autocomplete="off">
+      </div>
+      <div class="toolbar-selects">
+        <select id="evSortSelect" class="filter-select">
+          <option value="soonest"${(S.eventSort || 'soonest') === 'soonest' ? ' selected' : ''}>Sort: Soonest Date</option>
+          <option value="popular"${S.eventSort === 'popular' ? ' selected' : ''}>Sort: Most Popular</option>
+          <option value="price-asc"${S.eventSort === 'price-asc' ? ' selected' : ''}>Sort: Price (Low → High)</option>
+          <option value="price-desc"${S.eventSort === 'price-desc' ? ' selected' : ''}>Sort: Price (High → Low)</option>
+        </select>
+      </div>
+    </div>
+
     <div class="diner-filters">
       <h2 style="margin:0;font-size:20px">Upcoming Pop-up Dinners</h2>
       <div id="dinerDistrictChips" class="diner-district-chips"></div>
@@ -420,9 +545,11 @@ async function renderEventsView() {
 function updateDinerFiltersUI() {
   var el = $1('#dinerDistrictChips');
   if (!el) return;
+  var savedCount = getSaved('event').length;
+  var savedBtn = `<button type="button" class="district-chip bookmark-filter-chip${S.dinerOnlySaved ? ' on' : ''}" data-act="diner-toggle-saved">❤️ Saved (${savedCount})</button>`;
   el.innerHTML = DINER_DISTRICTS.map(d =>
-    `<button type="button" class="district-chip${(S.dinerDistrict || 'All Cairo') === d ? ' on' : ''}" data-act="diner-district" data-district="${d}">${d}</button>`
-  ).join('');
+    `<button type="button" class="district-chip${(!S.dinerOnlySaved && (S.dinerDistrict || 'All Cairo') === d) ? ' on' : ''}" data-act="diner-district" data-district="${d}">${d}</button>`
+  ).join('') + savedBtn;
 }
 
 function renderFilteredEvents() {
@@ -453,13 +580,38 @@ function renderFilteredEvents() {
 
   var events = S.events || [];
   var dFilter = S.dinerDistrict || 'All Cairo';
+  var q = (S.eventSearchQuery || '').trim().toLowerCase();
+  var sort = S.eventSort || 'soonest';
+  var onlySaved = S.dinerOnlySaved;
 
   var filtered = events.filter(ev => {
+    if (onlySaved && !isSaved('event', ev.id)) return false;
     if (dFilter !== 'All Cairo') {
       var addr = ((ev.address || '') + ' ' + (ev.kitchen_name || '')).toLowerCase();
       if (addr.indexOf(dFilter.toLowerCase()) === -1) return false;
     }
+    if (q) {
+      var matchTitle = (ev.title || '').toLowerCase().indexOf(q) > -1;
+      var matchChef = (ev.chef_name || '').toLowerCase().indexOf(q) > -1;
+      var matchKitchen = (ev.kitchen_name || '').toLowerCase().indexOf(q) > -1;
+      var matchMenu = (ev.menu_description || '').toLowerCase().indexOf(q) > -1;
+      if (!matchTitle && !matchChef && !matchKitchen && !matchMenu) return false;
+    }
     return true;
+  });
+
+  // Sort logic
+  filtered.sort((a, b) => {
+    if (sort === 'price-asc') return (Number(a.ticket_price) || 0) - (Number(b.ticket_price) || 0);
+    if (sort === 'price-desc') return (Number(b.ticket_price) || 0) - (Number(a.ticket_price) || 0);
+    if (sort === 'popular') {
+      var soldA = (a.capacity || 20) - (a.seats_left != null ? a.seats_left : a.capacity || 20);
+      var soldB = (b.capacity || 20) - (b.seats_left != null ? b.seats_left : b.capacity || 20);
+      return soldB - soldA;
+    }
+    var timeA = new Date(a.starts_at || a.start_time || 0).getTime();
+    var timeB = new Date(b.starts_at || b.start_time || 0).getTime();
+    return timeA - timeB;
   });
 
   // Prepend chef's pending preview events if logged in as chef
@@ -469,12 +621,14 @@ function renderFilteredEvents() {
   }
 
   if (!filtered.length) {
+    var emptyTitle = onlySaved ? 'No Saved Supper Clubs' : `No Dinners Found in ${esc(dFilter)}`;
+    var emptySub = onlySaved ? 'Tap the heart icon on any supper club card to save it to your wishlist.' : 'Try adjusting your search terms or switching Cairo districts.';
     grid.innerHTML = `
-      <div class="card empty" style="text-align:center;padding:40px 20px;grid-column: 1 / -1;">
-        <div style="font-size:36px;margin-bottom:12px">🍽️</div>
-        <h2>No Dinners Found in ${esc(dFilter)}</h2>
-        <p class="muted" style="max-width:440px;margin:0 auto 16px">Try switching districts or checking back as chefs publish new supper club dates.</p>
-        <button type="button" class="ghost" data-act="diner-district" data-district="All Cairo">Show All Cairo Dinners</button>
+      <div class="card empty" style="text-align:center;padding:44px 20px;grid-column: 1 / -1;">
+        <div style="font-size:38px;margin-bottom:12px">🍽️</div>
+        <h2>${emptyTitle}</h2>
+        <p class="muted" style="max-width:440px;margin:0 auto 16px">${emptySub}</p>
+        <button type="button" class="ghost" data-act="reset-diner-filters">Reset All Filters</button>
       </div>
     `;
     return;
@@ -490,6 +644,7 @@ function renderFilteredEvents() {
     var f = flash && flash.id === ev.id;
     var cleanChef = (ev.chef_name || me() || 'Guest Chef').replace(/^chef\s+/i, '').trim();
     var district = (ev.address || '').split(',')[1] || (ev.kitchen_name || '').split('–')[1] || 'Dokki';
+    var saved = isSaved('event', ev.id);
 
     if (ev.isPendingPreview) {
       return `
@@ -536,7 +691,11 @@ function renderFilteredEvents() {
     return `
       <div class="card lift">
         <div class="card-media">
+          <button type="button" class="card-bookmark-btn${saved ? ' saved' : ''}" data-act="toggle-save-event" data-id="${ev.id}" title="${saved ? 'Remove from saved' : 'Save supper club'}" aria-label="Save supper club">
+            ${saved ? ICONS.heartFilled : ICONS.heartOutline}
+          </button>
           <img class="card-img" src="${photo}" alt="${esc(ev.title)}" loading="lazy">
+          <div class="card-badge-countdown">${ICONS.cal} ${formatCountdown(ev.starts_at || ev.start_time)}</div>
           <div class="card-badge-top">${left > 5 ? left + ' seats left' : left > 0 ? 'Only ' + left + ' left' : 'Sold out'}</div>
           <div class="card-badge-bottom">${ICONS.pin} Secret Venue · ${esc(district.trim())}</div>
         </div>
@@ -546,7 +705,15 @@ function renderFilteredEvents() {
           <div class="price" style="font-size:19px">${fmt(ev.ticket_price)} <span class="muted" style="font-size:12px">/ seat</span></div>
         </div>
 
-        <div class="muted" style="margin:4px 0 10px;font-size:13px">${ICONS.chef} Hosted by Chef ${esc(cleanChef)} · ${ICONS.cal} ${dateStr}</div>
+        <div class="muted" style="margin:4px 0 6px;font-size:13px">${ICONS.chef} Hosted by Chef ${esc(cleanChef)} · ${ICONS.cal} ${dateStr}</div>
+
+        <!-- Social Proof Badges -->
+        <div class="social-proof-row">
+          ${pct >= 50 ? `<span class="social-proof-tag flame">🔥 ${pct}% Claimed</span>` : ''}
+          ${left <= 4 && left > 0 ? `<span class="social-proof-tag urgent">⚡ Only ${left} Left</span>` : ''}
+          <span class="social-proof-tag rating">★ 4.9 · Curated Residency</span>
+          <span class="social-proof-tag culinary">MOH Certified Facility</span>
+        </div>
 
         <div class="seat-progress-area">
           <div class="seat-progress-info">
@@ -577,8 +744,7 @@ function renderFilteredEvents() {
           <input name="dietary_notes" type="text" placeholder="Dietary notes / allergies (optional)" style="width:100%;font-size:12px;padding:7px 12px;margin-top:8px;border-radius:8px;border:1px solid var(--line);background:var(--card-subtle);color:var(--text);font-family:inherit">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:12px">
             <button type="button" data-act="share-event" data-id="${ev.id}" data-title="${esc(ev.title)}" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:12px;display:inline-flex;align-items:center;gap:4px">
-              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-              Share Supper Club
+              ${ICONS.share} Share Supper Club
             </button>
             <span class="muted" style="font-size:11.5px">InstaPay · Cards · Wallets</span>
           </div>
@@ -700,9 +866,11 @@ async function renderKitchensView() {
 function updateKitchenFiltersUI() {
   var dEl = $1('#districtChips');
   if (dEl) {
+    var savedCount = getSaved('kitchen').length;
+    var savedBtn = `<button type="button" class="district-chip bookmark-filter-chip${S.kitchenOnlySaved ? ' on' : ''}" data-act="kitchen-toggle-saved">❤️ Saved (${savedCount})</button>`;
     dEl.innerHTML = DISTRICTS.map(d =>
-      `<button type="button" class="district-chip${S.district === d ? ' on' : ''}" data-act="district" data-district="${d}">${d}</button>`
-    ).join('') + ((S.district !== 'All' || S.setup !== 'All Setups' || (S.maxRate && S.maxRate !== 'All Rates') || (S.equipFilter && S.equipFilter !== 'All Equipment') || S.searchQuery) ? '<button type="button" class="district-chip" data-act="clearfilter" style="border-style:dashed">Reset All</button>' : '');
+      `<button type="button" class="district-chip${(!S.kitchenOnlySaved && S.district === d) ? ' on' : ''}" data-act="district" data-district="${d}">${d}</button>`
+    ).join('') + savedBtn + ((S.district !== 'All' || S.setup !== 'All Setups' || (S.maxRate && S.maxRate !== 'All Rates') || (S.equipFilter && S.equipFilter !== 'All Equipment') || S.searchQuery || S.kitchenOnlySaved) ? '<button type="button" class="district-chip" data-act="clearfilter" style="border-style:dashed">Reset All</button>' : '');
   }
 
   var sSel = $1('#kSetupSelect');
@@ -718,6 +886,8 @@ function renderFilteredKitchens() {
   var q = (S.searchQuery || '').trim().toLowerCase();
 
   var filtered = list.filter(function(k) {
+    // Bookmarked filter
+    if (S.kitchenOnlySaved && !isSaved('kitchen', k.id)) return false;
     // District
     if (S.district && S.district !== 'All') {
       if (!k.address || k.address.toLowerCase().indexOf(S.district.toLowerCase()) === -1) {
@@ -785,10 +955,14 @@ function renderFilteredKitchens() {
     var equip = k.equipment || k.equip || [];
     var photo = KITCHEN_PHOTOS[idx % KITCHEN_PHOTOS.length];
     var openSlots = sl.filter(s => s.status !== 'booked');
+    var saved = isSaved('kitchen', k.id);
 
     return `
       <div class="card lift">
         <div class="card-media">
+          <button type="button" class="card-bookmark-btn${saved ? ' saved' : ''}" data-act="toggle-save-kitchen" data-id="${k.id}" title="${saved ? 'Remove from saved' : 'Save kitchen'}" aria-label="Save kitchen space">
+            ${saved ? ICONS.heartFilled : ICONS.heartOutline}
+          </button>
           <img class="card-img" src="${photo}" alt="${esc(k.name)}" loading="lazy">
           <div class="card-badge-top">${st === 'verified' ? '✓ Licensed & Inspected' : 'Pending Verification'}</div>
           <div class="card-badge-bottom">${ICONS.pin} ${esc(k.address)}</div>
@@ -805,10 +979,15 @@ function renderFilteredKitchens() {
           </div>
         </div>
 
+        <!-- Spec Badges -->
+        <div class="social-proof-row" style="margin:8px 0 6px">
+          <span class="social-proof-tag rating">★ 4.9 (24 shifts)</span>
+          <span class="social-proof-tag culinary">100% Health Code Score</span>
+        </div>
+
         <!-- Spec Pills -->
-        <div class="chips sm" style="margin:12px 0 10px">
+        <div class="chips sm" style="margin:6px 0 10px">
           ${equip.map(e => '<span class="chip">' + esc(e) + '</span>').join('')}
-          <span class="chip" style="background:var(--ok-bg);color:var(--ok);border-color:var(--ok-border)">Health Code Checked</span>
         </div>
 
         <!-- Shift Slot Availability Preview -->
@@ -844,7 +1023,12 @@ function openKitchenDetail(kId, cardPhoto) {
   if (!k) return;
 
   var sl = S.slots.filter(s => s.kitchen_id === k.id);
-  var photo = cardPhoto || hashPhoto(k.name || k.id, KITCHEN_PHOTOS);
+  var photo1 = cardPhoto || hashPhoto(k.name || k.id, KITCHEN_PHOTOS);
+  var photoIdx = KITCHEN_PHOTOS.indexOf(photo1);
+  if (photoIdx === -1) photoIdx = 0;
+  var photo2 = KITCHEN_PHOTOS[(photoIdx + 2) % KITCHEN_PHOTOS.length];
+  var photo3 = KITCHEN_PHOTOS[(photoIdx + 4) % KITCHEN_PHOTOS.length];
+
   var equip = k.equipment || k.equip || [];
   var st = k.verification_status || k.status || 'pending';
   var openSlots = sl.filter(s => s.status !== 'booked');
@@ -893,7 +1077,14 @@ function openKitchenDetail(kId, cardPhoto) {
 
   var modalHtml = `
     <div class="kitchen-detail-modal">
-      <img class="detail-img-banner" src="${photo}" alt="${esc(k.name)}">
+      <div class="detail-gallery">
+        <img class="detail-img-banner" id="kitchenDetailMainImg" src="${photo1}" alt="${esc(k.name)}">
+        <div class="gallery-thumbs">
+          <button type="button" class="thumb-btn on" data-act="switch-gallery-img" data-src="${photo1}">Main Space</button>
+          <button type="button" class="thumb-btn" data-act="switch-gallery-img" data-src="${photo2}">Prep Stations</button>
+          <button type="button" class="thumb-btn" data-act="switch-gallery-img" data-src="${photo3}">Plating & Dining</button>
+        </div>
+      </div>
       
       <div class="row" style="margin-bottom:8px">
         <div>
@@ -1103,7 +1294,10 @@ async function renderTicketsView() {
           </div>
           <div class="ticket-footer">
             <span class="ticket-ref">PASS #T-${t.ref_no}</span>
-            <button type="button" class="ghost" data-act="print-ticket" style="font-size:12px;padding:5px 14px">Print / Save Pass</button>
+            <div style="display:flex;gap:8px">
+              <button type="button" class="ghost" data-act="view-qr-modal" data-ref="${t.ref_no}" data-title="${esc(t.event_title)}" data-chef="${esc(t.chef_name)}" data-addr="${esc(t.kitchen_address || t.kitchen_name)}" data-qty="${t.quantity}" style="font-size:12px;padding:5px 12px">📱 QR Pass</button>
+              <button type="button" class="ghost" data-act="print-ticket" style="font-size:12px;padding:5px 12px">Print / Save</button>
+            </div>
           </div>
         </div>
       `;
@@ -1159,6 +1353,7 @@ async function renderChefView() {
         <div class="stat"><b>${S.events.length}</b><span>Active Dinners</span></div>
       </div>
     `;
+    animateStats();
 
     var bf = $1('#chefBookingsFeed');
     if (!S.bookings.length) {
@@ -1281,6 +1476,7 @@ async function renderHostView() {
         <div class="stat"><b>${S.kitchens.length}</b><span>Kitchens Listed</span></div>
       </div>
     `;
+    animateStats();
 
     // Render filter tabs with live counts
     var curTab = S.hostBookingTab || (pCount > 0 ? 'pending' : 'all');
@@ -1430,6 +1626,7 @@ async function renderAdminView() {
         <div class="bn-f">Total Marketplace Ticket Revenue: <b>${fmt(st.revenue_egp)}</b></div>
       </div>
     `;
+    animateStats();
 
     var pendingKitchens = kData.kitchens || [];
     var kBadge = $1('#kitchenPendingCount');
@@ -1846,10 +2043,17 @@ document.addEventListener('click', async e => {
     return;
   }
 
-  // Share Event
+  // Share Event (Native Mobile Web Share API + Clipboard Fallback)
   if (a === 'share-event') {
+    var shareTitle = b.dataset.title || 'Cairo Pop-up Supper Club';
     var shareUrl = location.origin + location.pathname + '#events';
-    if (navigator.clipboard && navigator.clipboard.writeText) {
+    if (navigator.share) {
+      navigator.share({
+        title: shareTitle,
+        text: 'Join me for "' + shareTitle + '" — an exclusive Cairo pop-up supper club:',
+        url: shareUrl
+      }).catch(() => {});
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(shareUrl).then(() => {
         toast('Supper club link copied to clipboard!');
       }).catch(() => {
@@ -1857,6 +2061,75 @@ document.addEventListener('click', async e => {
       });
     } else {
       toast('Share link: ' + shareUrl);
+    }
+    return;
+  }
+
+  // Toggle Save Event (Bookmark)
+  if (a === 'toggle-save-event') {
+    e.stopPropagation();
+    var addedEv = toggleSaved('event', id);
+    toast(addedEv ? 'Saved dinner to your bookmarks!' : 'Removed from saved dinners.');
+    renderFilteredEvents();
+    updateDinerFiltersUI();
+    return;
+  }
+
+  // Toggle Saved Diner Filter
+  if (a === 'diner-toggle-saved') {
+    S.dinerOnlySaved = !S.dinerOnlySaved;
+    updateDinerFiltersUI();
+    renderFilteredEvents();
+    return;
+  }
+
+  // Reset All Diner Filters
+  if (a === 'reset-diner-filters') {
+    S.dinerDistrict = 'All Cairo';
+    S.dinerOnlySaved = false;
+    S.eventSearchQuery = '';
+    S.eventSort = 'soonest';
+    var es = $1('#evSearch');
+    if (es) es.value = '';
+    var ess = $1('#evSortSelect');
+    if (ess) ess.value = 'soonest';
+    updateDinerFiltersUI();
+    renderFilteredEvents();
+    return;
+  }
+
+  // Toggle Save Kitchen (Bookmark)
+  if (a === 'toggle-save-kitchen') {
+    e.stopPropagation();
+    var addedKt = toggleSaved('kitchen', id);
+    toast(addedKt ? 'Saved kitchen to your bookmarks!' : 'Removed from saved kitchens.');
+    renderFilteredKitchens();
+    updateKitchenFiltersUI();
+    return;
+  }
+
+  // Toggle Saved Kitchen Filter
+  if (a === 'kitchen-toggle-saved') {
+    S.kitchenOnlySaved = !S.kitchenOnlySaved;
+    updateKitchenFiltersUI();
+    renderFilteredKitchens();
+    return;
+  }
+
+  // View QR Code Modal
+  if (a === 'view-qr-modal') {
+    openQRModal(b.dataset.ref, b.dataset.title, b.dataset.chef, b.dataset.addr, b.dataset.qty);
+    return;
+  }
+
+  // Switch Gallery Image in Kitchen Detail Modal
+  if (a === 'switch-gallery-img') {
+    var src = b.dataset.src;
+    var mainImg = $1('#kitchenDetailMainImg');
+    if (mainImg && src) {
+      mainImg.src = src;
+      $$('.gallery-thumbs .thumb-btn').forEach(btn => btn.classList.remove('on'));
+      b.classList.add('on');
     }
     return;
   }
@@ -2190,6 +2463,15 @@ document.addEventListener('submit', async e => {
 // ── REAL-TIME SEARCH & TICKET PRICING ───────────────────────────────────────
 var searchTimeout = null;
 document.addEventListener('input', e => {
+  if (e.target.id === 'evSearch') {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      S.eventSearchQuery = e.target.value;
+      renderFilteredEvents();
+    }, 150);
+    return;
+  }
+
   if (e.target.id === 'kSearch') {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
@@ -2210,7 +2492,11 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('change', e => {
-  if (e.target.id === 'kSetupSelect') {
+  if (e.target.id === 'evSortSelect') {
+    S.eventSort = e.target.value;
+    renderFilteredEvents();
+    return;
+  } else if (e.target.id === 'kSetupSelect') {
     S.setup = e.target.value;
     renderFilteredKitchens();
     updateKitchenFiltersUI();
