@@ -525,22 +525,43 @@ async function renderKitchensView() {
       </div>
     </section>
 
-    <!-- Search Box -->
-    <div class="search-box">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="search-ico"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="search" id="kSearch" placeholder="Search by kitchen name, equipment, Zamalek, Maadi, Dokki, New Cairo..." autocomplete="off">
+    <!-- Search Bar & Dropdown Filter Toolbar in One Compact Row -->
+    <div class="kitchen-toolbar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="search-ico"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="kSearch" placeholder="Search by kitchen name, equipment, or district..." autocomplete="off">
+      </div>
+      <div class="toolbar-selects">
+        <select id="kSetupSelect" class="filter-select">
+          <option value="All Setups">All Setups</option>
+          <option value="Hot Cooking Line">Hot Cooking Line</option>
+          <option value="Bakery Deck">Bakery Deck</option>
+          <option value="Supper Club (Kitchen+Dining)">Supper Club Studio</option>
+          <option value="Cold Prep">Cold Prep</option>
+        </select>
+        <select id="kRateSelect" class="filter-select">
+          <option value="All Rates">All Rates</option>
+          <option value="< 300 EGP">&lt; 300 EGP / hr</option>
+          <option value="300–350 EGP">300–350 EGP / hr</option>
+          <option value="350+ EGP">350+ EGP / hr</option>
+        </select>
+        <select id="kEquipSelect" class="filter-select">
+          <option value="All Equipment">All Equipment</option>
+          <option value="Walk-in chiller">Walk-in chiller</option>
+          <option value="Convection ovens">Convection ovens</option>
+          <option value="Gas range">Gas range</option>
+          <option value="Induction hobs">Induction hobs</option>
+        </select>
+      </div>
     </div>
 
-    <!-- Operational Filter Rows -->
-    <div class="filter-row">
+    <!-- Quick-tap District Chips -->
+    <div class="district-row">
       <div id="districtChips" class="district-chips"></div>
-      <div id="setupChips" class="setup-chips"></div>
-      <div id="rateChips" class="rate-chips"></div>
-      <div id="equipChips" class="chips"></div>
     </div>
 
-    <p class="muted" id="count" style="font-size:13.5px;font-weight:600;margin:16px 0 12px"></p>
-    <div id="kitchenList">${skeletonCards(3)}</div>
+    <p class="muted" id="count" style="font-size:13.5px;font-weight:600;margin:12px 0 14px"></p>
+    <div id="kitchenList">${skeletonCards(2)}</div>
   `;
 
   updateKitchenFiltersUI();
@@ -566,28 +587,18 @@ async function renderKitchensView() {
 
 function updateKitchenFiltersUI() {
   var dEl = $1('#districtChips');
-  var sEl = $1('#setupChips');
-  var rEl = $1('#rateChips');
-  var eEl = $1('#equipChips');
-  if (!dEl) return;
-
-  dEl.innerHTML = DISTRICTS.map(d =>
-    `<button type="button" class="district-chip${S.district === d ? ' on' : ''}" data-act="district" data-district="${d}">${d}</button>`
-  ).join('');
-
-  sEl.innerHTML = SETUPS.map(s =>
-    `<button type="button" class="setup-chip${S.setup === s ? ' on' : ''}" data-act="setup" data-setup="${s}">${s}</button>`
-  ).join('');
-
-  if (rEl) {
-    rEl.innerHTML = RATES.map(r =>
-      `<button type="button" class="rate-chip${(S.maxRate || 'All Rates') === r ? ' on' : ''}" data-act="rate" data-rate="${r}">${r}</button>`
-    ).join('');
+  if (dEl) {
+    dEl.innerHTML = DISTRICTS.map(d =>
+      `<button type="button" class="district-chip${S.district === d ? ' on' : ''}" data-act="district" data-district="${d}">${d}</button>`
+    ).join('') + ((S.district !== 'All' || S.setup !== 'All Setups' || (S.maxRate && S.maxRate !== 'All Rates') || (S.equipFilter && S.equipFilter !== 'All Equipment') || S.searchQuery) ? '<button type="button" class="district-chip" data-act="clearfilter" style="border-style:dashed">Reset All</button>' : '');
   }
 
-  eEl.innerHTML = EQUIP.map(t =>
-    `<button type="button" class="chip${S.filters.indexOf(t) > -1 ? ' on' : ''}" data-act="filter" data-tag="${t}">${t}</button>`
-  ).join('') + ((S.filters.length || S.district !== 'All' || S.setup !== 'All Setups' || (S.maxRate && S.maxRate !== 'All Rates') || S.searchQuery) ? '<button type="button" class="chip clear" data-act="clearfilter">Reset Filters</button>' : '');
+  var sSel = $1('#kSetupSelect');
+  if (sSel) sSel.value = S.setup || 'All Setups';
+  var rSel = $1('#kRateSelect');
+  if (rSel) rSel.value = S.maxRate || 'All Rates';
+  var eSel = $1('#kEquipSelect');
+  if (eSel) eSel.value = S.equipFilter || 'All Equipment';
 }
 
 function renderFilteredKitchens() {
@@ -617,6 +628,11 @@ function renderFilteredKitchens() {
       if (S.maxRate === '< 300 EGP' && rateNum >= 300) return false;
       if (S.maxRate === '300–350 EGP' && (rateNum < 300 || rateNum > 350)) return false;
       if (S.maxRate === '350+ EGP' && rateNum < 350) return false;
+    }
+    // Equipment
+    if (S.equipFilter && S.equipFilter !== 'All Equipment') {
+      var kEquipArr = (k.equipment || k.equip || []).map(e => e.toLowerCase());
+      if (!kEquipArr.some(e => e.indexOf(S.equipFilter.toLowerCase()) > -1)) return false;
     }
     // Equipment
     if (S.filters && S.filters.length) {
@@ -1422,6 +1438,7 @@ document.addEventListener('click', async e => {
     S.district = 'All';
     S.setup = 'All Setups';
     S.maxRate = 'All Rates';
+    S.equipFilter = 'All Equipment';
     S.searchQuery = '';
     var si = $1('#kSearch');
     if (si) si.value = '';
@@ -1453,7 +1470,7 @@ document.addEventListener('click', async e => {
           </div>
           <div>
             <label>Hourly Rate (EGP)</label>
-            <input name="hourly_rate" type="number" placeholder="320" min="50" required>
+            <input name="hourly_rate" type="number" placeholder="320" min="150" required>
           </div>
         </div>
 
@@ -1612,8 +1629,10 @@ document.addEventListener('submit', async e => {
       await loginOrRegister(v('name'), v('email'), v('password'), r);
     }
     else if (t === 'kitchen') {
-      if (!v('name') || !v('address') || !v('license_info')) return fail(f, 'All fields are required.');
-      if (!(+x.hourly_rate.value > 0)) return fail(f, 'Enter an hourly rate above 0 EGP.', x.hourly_rate);
+      if (!v('name') || v('name').length < 4) return fail(f, 'Kitchen name must be at least 4 characters.', x.name);
+      if (!v('address') || v('address').length < 8) return fail(f, 'Full street address and district required (min 8 chars).', x.address);
+      if (!v('license_info') || v('license_info').length < 4) return fail(f, 'MOH License/permit must be at least 4 characters.', x.license_info);
+      if (!(+x.hourly_rate.value >= 150)) return fail(f, 'Hourly rate must be at least 150 EGP for commercial facilities.', x.hourly_rate);
 
       var equipArr = v('equip') ? v('equip').split(',').map(s => s.trim()).filter(Boolean) : [];
       await api('POST', '/kitchens', {
@@ -1624,7 +1643,7 @@ document.addEventListener('submit', async e => {
         equipment: equipArr
       });
       closeModal();
-      toast('Kitchen submitted for verification!');
+      toast('Kitchen submitted! Awaiting administrator license verification before public listing.');
       route();
     }
     else if (t === 'slot') {
@@ -1706,6 +1725,22 @@ document.addEventListener('input', e => {
   q.removeAttribute('aria-invalid');
   var er = $1('.msg.err', f);
   if (er) er.hidden = true;
+});
+
+document.addEventListener('change', e => {
+  if (e.target.id === 'kSetupSelect') {
+    S.setup = e.target.value;
+    renderFilteredKitchens();
+    updateKitchenFiltersUI();
+  } else if (e.target.id === 'kRateSelect') {
+    S.maxRate = e.target.value;
+    renderFilteredKitchens();
+    updateKitchenFiltersUI();
+  } else if (e.target.id === 'kEquipSelect') {
+    S.equipFilter = e.target.value;
+    renderFilteredKitchens();
+    updateKitchenFiltersUI();
+  }
 });
 
 // ── INITIALIZE ──────────────────────────────────────────────────────────────

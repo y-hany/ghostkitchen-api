@@ -121,11 +121,11 @@ router.post('/', verifyToken, requireRole('host'), async (req, res) => {
 
     // Validate
     const errors = [];
-    if (!name || String(name).trim().length < 2)       errors.push('name is required (min 2 chars).');
-    if (!address || String(address).trim().length < 5)  errors.push('address is required.');
-    if (!license_info || String(license_info).trim().length < 2) errors.push('license_info is required.');
+    if (!name || String(name).trim().length < 4) errors.push('Kitchen name must be at least 4 characters.');
+    if (!address || String(address).trim().length < 8) errors.push('Full street address and district must be at least 8 characters.');
+    if (!license_info || String(license_info).trim().length < 4) errors.push('MOH commercial permit number is required (min 4 chars).');
     const rate = parseFloat(hourly_rate);
-    if (isNaN(rate) || rate <= 0) errors.push('hourly_rate must be a positive number.');
+    if (isNaN(rate) || rate < 150) errors.push('Hourly rate must be at least 150 EGP/hour for licensed commercial spaces.');
     if (errors.length)
       return res.status(400).json({ error: errors.join(' ') });
 
@@ -133,8 +133,8 @@ router.post('/', verifyToken, requireRole('host'), async (req, res) => {
     const equip = Array.isArray(equipment) ? equipment.map(String) : [];
 
     const { rows } = await pool.query(
-      `INSERT INTO kitchens (host_id, name, address, license_info, hourly_rate, equipment)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO kitchens (host_id, name, address, license_info, hourly_rate, equipment, verification_status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending')
        RETURNING *`,
       [req.user.id, name.trim(), address.trim(), license_info.trim(), rate, equip]
     );

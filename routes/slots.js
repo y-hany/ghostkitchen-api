@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
     } else {
       const result = await pool.query(
         `SELECT id, kitchen_id, start_time, end_time, status, created_at, updated_at
-         FROM slots WHERE status = 'available' AND end_time > NOW() ORDER BY start_time`
+         FROM slots WHERE status = 'open' AND end_time > NOW() ORDER BY start_time`
       );
       rows = result.rows;
     }
