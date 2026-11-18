@@ -74,6 +74,13 @@ var ICONS = {
   chef: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 13.8V4a2 2 0 0 1 4 0v9.8"/><path d="M14 13.8V4a2 2 0 0 1 4 0v9.8"/><path d="M10 10.5V4a2 2 0 0 1 4 0v6.5"/><path d="M19 14a6 6 0 1 1-14 0"/><path d="M5 14h14v7H5z"/></svg>',
   shield: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>',
   ticket: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>',
+  navDinner: '<svg class="nav-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>',
+  navKitchen: '<svg class="nav-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 13.8V4a2 2 0 0 1 4 0v9.8"/><path d="M14 13.8V4a2 2 0 0 1 4 0v9.8"/><path d="M10 10.5V4a2 2 0 0 1 4 0v6.5"/><path d="M19 14a6 6 0 1 1-14 0"/><path d="M5 14h14v7H5z"/></svg>',
+  navTicket: '<svg class="nav-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>',
+  navBookings: '<svg class="nav-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>',
+  navHub: '<svg class="nav-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+  navAdmin: '<svg class="nav-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>',
+  navLogin: '<svg class="nav-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>',
   sun: '<svg class="theme-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>',
   moon: '<svg class="theme-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
 };
@@ -248,6 +255,17 @@ function closeModal() {
 }
 
 // ── DYNAMIC RBAC NAVIGATION ─────────────────────────────────────────────────
+function navItem(href, routeKey, cur, iconSvg, label, count) {
+  var isActive = cur === routeKey;
+  var badge = (count && count > 0) ? `<span class="nav-count-badge">${count}</span>` : '';
+  return `
+    <a href="${href}" class="${isActive ? 'on' : ''}">
+      <span class="nav-ico-wrap">${iconSvg}${badge}</span>
+      <span class="nav-label">${label}</span>
+    </a>
+  `;
+}
+
 function updateNav() {
   var r = role();
   var navLinks = $1('#navLinks');
@@ -256,59 +274,58 @@ function updateNav() {
 
   var linksHtml = '';
   if (r === 'guest') {
-    linksHtml = `
-      <a href="#events" class="${cur === 'events' ? 'on' : ''}">Supper Clubs</a>
-      <a href="#kitchens" class="${cur === 'kitchens' ? 'on' : ''}">Kitchen Spaces</a>
-      <a href="#login" class="${cur === 'login' ? 'on' : ''}">Sign In</a>
-    `;
-    userAction.innerHTML = `<button class="nav-cta" data-act="open-cook-host">Cook or Host</button>`;
+    linksHtml = [
+      navItem('#events', 'events', cur, ICONS.navDinner, 'Supper Clubs'),
+      navItem('#kitchens', 'kitchens', cur, ICONS.navKitchen, 'Kitchen Spaces'),
+      navItem('#login', 'login', cur, ICONS.navLogin, 'Sign In')
+    ].join('');
+    userAction.innerHTML = `<button class="nav-cta" data-act="open-cook-host">Cook / Host</button>`;
   } else if (r === 'attendee') {
     var ticketCount = (S.tickets || []).length;
-    var badgeHtml = ticketCount > 0 ? `<span class="nav-count-badge">${ticketCount}</span>` : '';
-    linksHtml = `
-      <a href="#events" class="${cur === 'events' ? 'on' : ''}">Explore Supper Clubs</a>
-      <a href="#tickets" class="${cur === 'tickets' ? 'on' : ''}">My Passes${badgeHtml}</a>
-    `;
+    linksHtml = [
+      navItem('#events', 'events', cur, ICONS.navDinner, 'Supper Clubs'),
+      navItem('#tickets', 'tickets', cur, ICONS.navTicket, 'My Passes', ticketCount)
+    ].join('');
     userAction.innerHTML = `
       <div class="user-menu">
-        <span class="role-chip">${esc(me().split(' ')[0])} · Diner</span>
+        <span class="role-chip" title="${esc(me())}">${esc(me().split(' ')[0])} · Diner</span>
         <button class="logout-btn" data-act="logout">Sign out</button>
       </div>
     `;
   } else if (r === 'chef') {
-    linksHtml = `
-      <a href="#kitchens" class="${cur === 'kitchens' ? 'on' : ''}">Kitchen Spaces</a>
-      <a href="#chef-bookings" class="${cur === 'chef' ? 'on' : ''}">My Bookings</a>
-      <a href="#events" class="${cur === 'events' ? 'on' : ''}">Explore Dinners</a>
-    `;
+    linksHtml = [
+      navItem('#kitchens', 'kitchens', cur, ICONS.navKitchen, 'Kitchen Spaces'),
+      navItem('#chef-bookings', 'chef', cur, ICONS.navBookings, 'My Shifts'),
+      navItem('#events', 'events', cur, ICONS.navDinner, 'Supper Clubs')
+    ].join('');
     userAction.innerHTML = `
       <div class="user-menu">
-        <button class="nav-cta" data-act="modal-event">+ Host a Pop-up</button>
-        <span class="role-chip">${esc(me().split(' ')[0])} · Chef</span>
+        <button class="nav-cta" data-act="modal-event">+ Pop-up</button>
+        <span class="role-chip" title="${esc(me())}">${esc(me().split(' ')[0])} · Chef</span>
         <button class="logout-btn" data-act="logout">Sign out</button>
       </div>
     `;
   } else if (r === 'host') {
-    linksHtml = `
-      <a href="#host-dashboard" class="${cur === 'host' ? 'on' : ''}">Kitchen Hub</a>
-      <a href="#kitchens" class="${cur === 'kitchens' ? 'on' : ''}">Browse Network</a>
-    `;
+    linksHtml = [
+      navItem('#host-dashboard', 'host', cur, ICONS.navHub, 'Kitchen Hub'),
+      navItem('#kitchens', 'kitchens', cur, ICONS.navKitchen, 'Spaces')
+    ].join('');
     userAction.innerHTML = `
       <div class="user-menu">
-        <button class="nav-cta" data-act="modal-kitchen">+ List Kitchen</button>
-        <span class="role-chip">${esc(me().split(' ')[0])} · Host</span>
+        <button class="nav-cta" data-act="modal-kitchen">+ Kitchen</button>
+        <span class="role-chip" title="${esc(me())}">${esc(me().split(' ')[0])} · Host</span>
         <button class="logout-btn" data-act="logout">Sign out</button>
       </div>
     `;
   } else if (r === 'admin') {
-    linksHtml = `
-      <a href="#admin-console" class="${cur === 'admin' ? 'on' : ''}">Verifications</a>
-      <a href="#kitchens" class="${cur === 'kitchens' ? 'on' : ''}">Kitchens</a>
-      <a href="#events" class="${cur === 'events' ? 'on' : ''}">Pop-ups</a>
-    `;
+    linksHtml = [
+      navItem('#admin-console', 'admin', cur, ICONS.navAdmin, 'Verifications'),
+      navItem('#kitchens', 'kitchens', cur, ICONS.navKitchen, 'Kitchens'),
+      navItem('#events', 'events', cur, ICONS.navDinner, 'Pop-ups')
+    ].join('');
     userAction.innerHTML = `
       <div class="user-menu">
-        <span class="role-chip">Platform Admin</span>
+        <span class="role-chip">Admin</span>
         <button class="logout-btn" data-act="logout">Sign out</button>
       </div>
     `;
