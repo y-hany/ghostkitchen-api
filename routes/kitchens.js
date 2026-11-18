@@ -48,19 +48,8 @@ router.get('/', async (req, res) => {
         sql += ` WHERE k.equipment @> $1::text[]`;
         params = [equipFilter];
       }
-    } else if (callerRole === 'host' && callerId) {
-      // Host: own kitchens regardless of status
-      sql = `SELECT k.*, u.name AS host_name
-             FROM kitchens k
-             JOIN users u ON u.id = k.host_id
-             WHERE k.host_id = $1`;
-      params = [callerId];
-      if (equipFilter.length) {
-        sql += ` AND k.equipment @> $2::text[]`;
-        params.push(equipFilter);
-      }
     } else {
-      // Public / chef / attendee: verified only
+      // Public / host / chef / attendee browsing marketplace: verified only
       sql = `SELECT k.*, u.name AS host_name
              FROM kitchens k
              JOIN users u ON u.id = k.host_id
@@ -78,6 +67,24 @@ router.get('/', async (req, res) => {
   } catch (err) {
     console.error('GET /api/kitchens:', err.message);
     return res.status(500).json({ error: 'Could not fetch kitchens.' });
+  }
+});
+
+// ── GET /api/kitchens/mine ────────────────────────────────────────────────────
+router.get('/mine', verifyToken, requireRole('host'), async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT k.*, u.name AS host_name
+       FROM kitchens k
+       JOIN users u ON u.id = k.host_id
+       WHERE k.host_id = $1
+       ORDER BY k.created_at DESC`,
+      [req.user.id]
+    );
+    return res.json({ kitchens: rows });
+  } catch (err) {
+    console.error('GET /api/kitchens/mine:', err.message);
+    return res.status(500).json({ error: 'Could not fetch your kitchens.' });
   }
 });
 

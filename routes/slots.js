@@ -11,14 +11,21 @@ const { verifyToken, requireRole } = require('../middleware/auth');
 router.get('/', async (req, res) => {
   try {
     const { kitchen_id } = req.query;
-    if (!kitchen_id)
-      return res.status(400).json({ error: 'kitchen_id query parameter is required.' });
-
-    const { rows } = await pool.query(
-      `SELECT id, kitchen_id, start_time, end_time, status, created_at, updated_at
-       FROM slots WHERE kitchen_id = $1 ORDER BY start_time`,
-      [kitchen_id]
-    );
+    let rows;
+    if (kitchen_id) {
+      const result = await pool.query(
+        `SELECT id, kitchen_id, start_time, end_time, status, created_at, updated_at
+         FROM slots WHERE kitchen_id = $1 ORDER BY start_time`,
+        [kitchen_id]
+      );
+      rows = result.rows;
+    } else {
+      const result = await pool.query(
+        `SELECT id, kitchen_id, start_time, end_time, status, created_at, updated_at
+         FROM slots WHERE status = 'available' AND end_time > NOW() ORDER BY start_time`
+      );
+      rows = result.rows;
+    }
     return res.json({ slots: rows });
   } catch (err) {
     console.error('GET /api/slots:', err.message);

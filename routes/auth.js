@@ -114,6 +114,48 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// ── POST /api/demo-login ──────────────────────────────────────────────────────
+router.post('/demo-login', async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!VALID_ROLES.includes(role)) {
+      return res.status(400).json({ error: `Valid demo roles: ${VALID_ROLES.join(', ')}` });
+    }
+
+    const demoAccounts = {
+      host:     { name: 'Layla Host',     email: 'host@demo.eg' },
+      chef:     { name: 'Omar Hassan',    email: 'chef@demo.eg' },
+      attendee: { name: 'Mariam Adel',    email: 'attendee@demo.eg' },
+      admin:    { name: 'Platform Admin', email: 'admin@demo.eg' }
+    };
+    const target = demoAccounts[role];
+
+    let { rows } = await pool.query(
+      `SELECT id, name, email, role, created_at, updated_at
+       FROM users WHERE lower(email) = $1`,
+      [target.email]
+    );
+
+    if (!rows.length) {
+      const hash = await bcrypt.hash('DemoPassword!2026', BCRYPT_ROUNDS);
+      const inserted = await pool.query(
+        `INSERT INTO users (name, email, password_hash, role)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, name, email, role, created_at, updated_at`,
+        [target.name, target.email, hash, role]
+      );
+      rows = inserted.rows;
+    }
+
+    const user = rows[0];
+    const token = signToken(user);
+    return res.json({ token, user: safeUser(user) });
+  } catch (err) {
+    console.error('POST /api/demo-login:', err.message);
+    return res.status(500).json({ error: 'Demo sign-in failed. Please try again.' });
+  }
+});
+
 // ── GET /api/me ───────────────────────────────────────────────────────────────
 
 router.get('/me', verifyToken, async (req, res) => {

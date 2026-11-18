@@ -5,10 +5,10 @@ var API = (window.location.origin && window.location.origin !== 'null' && window
 var K = 'gk_state_v4';
 
 var DEMO_USERS = {
-  host:     { name: 'Layla Host',       email: 'host@demo.eg',     password: 'password123', role: 'host' },
-  chef:     { name: 'Omar Hassan',      email: 'chef@demo.eg',     password: 'password123', role: 'chef' },
-  attendee: { name: 'Mariam Adel',      email: 'attendee@demo.eg', password: 'password123', role: 'attendee' },
-  admin:    { name: 'Platform Admin',   email: 'admin@demo.eg',    password: 'password123', role: 'admin' }
+  host:     { name: 'Layla Host',       email: 'host@demo.eg',     role: 'host' },
+  chef:     { name: 'Omar Hassan',      email: 'chef@demo.eg',     role: 'chef' },
+  attendee: { name: 'Mariam Adel',      email: 'attendee@demo.eg', role: 'attendee' },
+  admin:    { name: 'Platform Admin',   email: 'admin@demo.eg',    role: 'admin' }
 };
 
 var DISTRICTS = ['All', 'Dokki', 'Zamalek', 'Maadi', 'Heliopolis', 'Garden City', 'New Cairo', 'Sheikh Zayed'];
@@ -70,6 +70,14 @@ function toggleTheme() {
   setTheme(cur === 'dark' ? 'light' : 'dark');
 }
 
+function setRoute(h) {
+  if (location.hash === h) {
+    route();
+  } else {
+    location.hash = h;
+  }
+}
+
 // ── API CLIENT ─────────────────────────────────────────────────────────────
 async function api(method, path, body) {
   var token = localStorage.getItem('gk_token');
@@ -82,6 +90,15 @@ async function api(method, path, body) {
       body: body ? JSON.stringify(body) : undefined
     });
     var data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      localStorage.removeItem('gk_token');
+      localStorage.removeItem(K);
+      if (S) S.session = null;
+      updateNav();
+      toast('Session expired. Please sign in again.');
+      setRoute('#login');
+      throw new Error(data.error || 'Session expired');
+    }
     if (!res.ok) {
       throw new Error(data.error || 'Request failed (' + res.status + ')');
     }
@@ -371,19 +388,21 @@ async function renderEventsView() {
             <div class="row" style="align-items:flex-end;margin-bottom:12px">
               <div style="flex:1">
                 <label style="font-size:12.5px;font-weight:700">Reserve Seats ${role() !== 'guest' ? '<span class="muted">(as ' + esc(me().split(' ')[0]) + ')</span>' : ''}</label>
-                <input name="quantity" type="number" inputmode="numeric" min="1" max="${left}" placeholder="Seats (e.g. 2)" ${left ? '' : 'disabled'} style="margin:0">
+                <input name="quantity" type="number" inputmode="numeric" min="1" max="${left}" value="${left ? '1' : '0'}" placeholder="Seats (e.g. 2)" ${left ? '' : 'disabled'} style="margin:0">
               </div>
               <div style="text-align:right;padding-bottom:10px">
-                <span class="muted" style="font-size:12px">Total:</span> <b class="price total">0 EGP</b>
+                <span class="muted" style="font-size:12px">Total:</span> <b class="price total">${fmt(left ? ev.ticket_price : 0)}</b>
               </div>
             </div>
             <div class="msg err" role="alert" hidden></div>
-            ${f ? '<div class="msg ok" role="status"><b>Reservation Confirmed!</b> ' + flash.text + ' <a href="#tickets">View My Tickets</a></div>' : ''}
+            ${f ? '<div class="msg ok" role="status"><b>Reservation Confirmed!</b> ' + esc(flash.text) + ' <a href="#tickets">View My Tickets</a></div>' : ''}
             <button type="submit" style="width:100%" ${left ? '' : 'disabled'}>${left ? 'Reserve Pop-up Seats' : 'Sold Out'}</button>
           </form>
         </div>
       `;
     }).join('');
+
+    flash = null; // Clear flash banner after rendering
 
   } catch(err) {
     var g = $1('#eventGrid');
@@ -444,6 +463,7 @@ async function renderKitchensView() {
     <div class="filter-row">
       <div id="districtChips" class="district-chips"></div>
       <div id="setupChips" class="setup-chips"></div>
+      <div id="rateChips" class="rate-chips"></div>
       <div id="equipChips" class="chips"></div>
     </div>
 
@@ -454,17 +474,16 @@ async function renderKitchensView() {
   updateKitchenFiltersUI();
 
   try {
-    var data = await api('GET', '/kitchens');
-    S.kitchens = data.kitchens || [];
-
-    var allSlots = [];
-    for (var k of S.kitchens) {
-      try {
-        var sData = await api('GET', '/slots?kitchen_id=' + k.id);
-        allSlots = allSlots.concat(sData.slots || []);
-      } catch(e){}
+    var fetches = [api('GET', '/kitchens'), api('GET', '/slots')];
+    if (role() === 'chef') {
+      fetches.push(api('GET', '/bookings'));
     }
-    S.slots = allSlots;
+    var results = await Promise.all(fetches);
+    S.kitchens = results[0].kitchens || [];
+    S.slots = results[1].slots || [];
+    if (results[2] && results[2].bookings) {
+      S.bookings = results[2].bookings;
+    }
 
     renderFilteredKitchens();
   } catch(err) {
@@ -476,6 +495,7 @@ async function renderKitchensView() {
 function updateKitchenFiltersUI() {
   var dEl = $1('#districtChips');
   var sEl = $1('#setupChips');
+  var rEl = $1('#rateChips');
   var eEl = $1('#equipChips');
   if (!dEl) return;
 
@@ -487,9 +507,15 @@ function updateKitchenFiltersUI() {
     `<button type="button" class="setup-chip${S.setup === s ? ' on' : ''}" data-act="setup" data-setup="${s}">${s}</button>`
   ).join('');
 
+  if (rEl) {
+    rEl.innerHTML = RATES.map(r =>
+      `<button type="button" class="rate-chip${(S.maxRate || 'All Rates') === r ? ' on' : ''}" data-act="rate" data-rate="${r}">${r}</button>`
+    ).join('');
+  }
+
   eEl.innerHTML = EQUIP.map(t =>
     `<button type="button" class="chip${S.filters.indexOf(t) > -1 ? ' on' : ''}" data-act="filter" data-tag="${t}">${t}</button>`
-  ).join('') + ((S.filters.length || S.district !== 'All' || S.setup !== 'All Setups' || S.searchQuery) ? '<button type="button" class="chip clear" data-act="clearfilter">Reset Filters</button>' : '');
+  ).join('') + ((S.filters.length || S.district !== 'All' || S.setup !== 'All Setups' || (S.maxRate && S.maxRate !== 'All Rates') || S.searchQuery) ? '<button type="button" class="chip clear" data-act="clearfilter">Reset Filters</button>' : '');
 }
 
 function renderFilteredKitchens() {
@@ -509,8 +535,16 @@ function renderFilteredKitchens() {
       var kNameLow = (k.name || '').toLowerCase();
       var kEquipLow = (k.equipment || k.equip || []).join(' ').toLowerCase();
       if (sLow.indexOf('bakery') > -1 && kNameLow.indexOf('baker') === -1 && kEquipLow.indexOf('convection') === -1) return false;
-      if (sLow.indexOf('supper') > -1 && kEquipLow.indexOf('induction') === -1 && kNameLow.indexOf('studio') === -1) return false;
+      if (sLow.indexOf('supper') > -1 && kEquipLow.indexOf('induction') === -1 && kNameLow.indexOf('studio') === -1 && kNameLow.indexOf('dining') === -1) return false;
       if (sLow.indexOf('hot') > -1 && kEquipLow.indexOf('gas range') === -1) return false;
+      if (sLow.indexOf('cold') > -1 && kEquipLow.indexOf('chiller') === -1 && kEquipLow.indexOf('fridge') === -1) return false;
+    }
+    // Rates
+    if (S.maxRate && S.maxRate !== 'All Rates') {
+      var rateNum = Number(k.hourly_rate || 0);
+      if (S.maxRate === '< 300 EGP' && rateNum >= 300) return false;
+      if (S.maxRate === '300–350 EGP' && (rateNum < 300 || rateNum > 350)) return false;
+      if (S.maxRate === '350+ EGP' && rateNum < 350) return false;
     }
     // Equipment
     if (S.filters && S.filters.length) {
@@ -774,7 +808,7 @@ async function renderTicketsView() {
           </div>
           <div class="ticket-footer">
             <span class="ticket-ref">PASS #T-${t.ref_no}</span>
-            <button type="button" class="ghost" onclick="window.print()" style="font-size:12px;padding:5px 14px">Print / Save Pass</button>
+            <button type="button" class="ghost" data-act="print-ticket" style="font-size:12px;padding:5px 14px">Print / Save Pass</button>
           </div>
         </div>
       `;
@@ -905,10 +939,11 @@ async function renderHostView() {
   try {
     var [bData, kData] = await Promise.all([
       api('GET', '/bookings').catch(() => ({ bookings: [] })),
-      api('GET', '/kitchens').catch(() => ({ kitchens: [] }))
+      api('GET', '/kitchens/mine').catch(() => api('GET', '/kitchens')).catch(() => ({ kitchens: [] }))
     ]);
     S.bookings = bData.bookings || [];
-    S.kitchens = kData.kitchens || [];
+    var hostId = S.session ? S.session.id : null;
+    S.kitchens = (kData.kitchens || []).filter(k => !hostId || !k.host_id || k.host_id === hostId);
 
     var pCount = S.bookings.filter(b => b.status === 'pending').length;
     var aCount = S.bookings.filter(b => b.status === 'approved').length;
@@ -1094,6 +1129,17 @@ function route() {
   var r = getActiveRoute();
   updateNav();
 
+  var titles = {
+    events: 'Pop-ups & Supper Clubs — GhostKitchen Cairo',
+    kitchens: 'Commercial Kitchens & Spaces — GhostKitchen Cairo',
+    tickets: 'My Dining Passes — GhostKitchen Cairo',
+    chef: 'Chef Culinary Hub — GhostKitchen Cairo',
+    host: 'Kitchen Host Hub — GhostKitchen Cairo',
+    admin: 'Platform Admin Console — GhostKitchen Cairo',
+    login: 'Sign In / Register — GhostKitchen Cairo'
+  };
+  document.title = titles[r] || 'GhostKitchen & Supper Club Cairo';
+
   if (r === 'events') {
     renderEventsView();
   } else if (r === 'kitchens') {
@@ -1148,13 +1194,17 @@ async function loginOrRegister(name, email, password, r) {
 }
 
 function redirectAfterAuth(r) {
-  if (r === 'host') location.hash = '#host-dashboard';
-  else if (r === 'chef') location.hash = '#kitchens';
-  else if (r === 'admin') location.hash = '#admin-console';
-  else location.hash = '#events';
+  if (r === 'host') setRoute('#host-dashboard');
+  else if (r === 'chef') setRoute('#kitchens');
+  else if (r === 'admin') setRoute('#admin-console');
+  else setRoute('#events');
 }
 
 // ── EVENT LISTENERS (CLICKS & ACTIONS) ──────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
 document.addEventListener('click', async e => {
   // Theme toggle
   if (e.target.closest('#themeToggle')) {
@@ -1178,6 +1228,12 @@ document.addEventListener('click', async e => {
     return;
   }
 
+  // Print ticket
+  if (e.target.closest('[data-act="print-ticket"]')) {
+    window.print();
+    return;
+  }
+
   var b = e.target.closest('[data-act]');
   if (!b) return;
   var a = b.dataset.act;
@@ -1185,17 +1241,27 @@ document.addEventListener('click', async e => {
 
   // Reviewer Demo Persona Switching
   if (a === 'demo') {
-    var d = DEMO_USERS[b.dataset.role];
+    var dRole = b.dataset.role;
+    var d = DEMO_USERS[dRole];
     if (d) {
       toast('Switching persona to ' + d.name + ' (' + d.role + ')...');
-      await loginOrRegister(d.name, d.email, d.password, d.role);
+      try {
+        var res = await api('POST', '/demo-login', { role: dRole });
+        localStorage.setItem('gk_token', res.token);
+        S.session = res.user;
+        saveSession();
+        updateNav();
+        redirectAfterAuth(res.user.role);
+      } catch (err) {
+        toast('Demo switch failed: ' + err.message);
+      }
     }
     return;
   }
 
   // Cook or Host Call to Action
   if (a === 'open-cook-host') {
-    location.hash = '#login';
+    setRoute('#login');
     return;
   }
 
@@ -1205,8 +1271,7 @@ document.addEventListener('click', async e => {
     S.session = null;
     saveSession();
     toast('Signed out successfully.');
-    location.hash = '#events';
-    route();
+    setRoute('#events');
     return;
   }
 
@@ -1223,6 +1288,12 @@ document.addEventListener('click', async e => {
     updateKitchenFiltersUI();
     return;
   }
+  if (a === 'rate') {
+    S.maxRate = b.dataset.rate;
+    renderFilteredKitchens();
+    updateKitchenFiltersUI();
+    return;
+  }
   if (a === 'filter') {
     var i = S.filters.indexOf(b.dataset.tag);
     i > -1 ? S.filters.splice(i, 1) : S.filters.push(b.dataset.tag);
@@ -1234,6 +1305,7 @@ document.addEventListener('click', async e => {
     S.filters = [];
     S.district = 'All';
     S.setup = 'All Setups';
+    S.maxRate = 'All Rates';
     S.searchQuery = '';
     var si = $1('#kSearch');
     if (si) si.value = '';
@@ -1311,10 +1383,16 @@ document.addEventListener('click', async e => {
   }
 
   if (a === 'modal-event') {
+    if (!S.bookings || !S.bookings.length) {
+      try {
+        var bRes = await api('GET', '/bookings');
+        S.bookings = bRes.bookings || [];
+      } catch (err) {}
+    }
     var approvedBookings = (S.bookings || []).filter(b => b.status === 'approved');
     if (!approvedBookings.length) {
       toast('You need an approved kitchen shift before publishing a pop-up dinner.');
-      location.hash = '#kitchens';
+      setRoute('#kitchens');
       return;
     }
     openModal('Publish Pop-up Supper Club Dinner', `
@@ -1352,8 +1430,12 @@ document.addEventListener('click', async e => {
   try {
     if (a === 'request') {
       if (role() !== 'chef') {
-        toast('Chef account required. Switched to Chef Omar.');
-        await loginOrRegister(DEMO_USERS.chef.name, DEMO_USERS.chef.email, DEMO_USERS.chef.password, DEMO_USERS.chef.role);
+        toast('Chef account required. Switching to Chef persona...');
+        var demoRes = await api('POST', '/demo-login', { role: 'chef' });
+        localStorage.setItem('gk_token', demoRes.token);
+        S.session = demoRes.user;
+        saveSession();
+        updateNav();
       }
       await api('POST', '/bookings', { slot_id: id });
       toast('Booking request sent to kitchen host!');
@@ -1393,6 +1475,12 @@ document.addEventListener('submit', async e => {
   var f = e.target.closest('form');
   if (!f) return;
   e.preventDefault();
+
+  var subBtn = f.querySelector('button[type="submit"]');
+  if (subBtn) {
+    subBtn.disabled = true;
+    subBtn.style.opacity = '0.6';
+  }
 
   var er = $1('.msg.err', f);
   if (er) er.hidden = true;
@@ -1452,12 +1540,12 @@ document.addEventListener('submit', async e => {
       });
       closeModal();
       toast('Pop-up supper club published!');
-      location.hash = '#events';
+      setRoute('#events');
     }
     else if (t === 'reserve') {
       if (role() === 'guest') {
         toast('Please sign in or select a guest demo role to reserve.');
-        location.hash = '#login';
+        setRoute('#login');
         return;
       }
       var q = x.quantity, n = parseInt(q.value, 10), left = +f.dataset.left;
@@ -1474,14 +1562,23 @@ document.addEventListener('submit', async e => {
     }
   } catch (err) {
     fail(f, err.message);
+  } finally {
+    if (subBtn) {
+      subBtn.disabled = false;
+      subBtn.style.opacity = '';
+    }
   }
 });
 
 // ── REAL-TIME SEARCH & TICKET PRICING ───────────────────────────────────────
+var searchTimeout = null;
 document.addEventListener('input', e => {
   if (e.target.id === 'kSearch') {
-    S.searchQuery = e.target.value;
-    renderFilteredKitchens();
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      S.searchQuery = e.target.value;
+      renderFilteredKitchens();
+    }, 150);
     return;
   }
 
