@@ -129,6 +129,38 @@ router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
   }
 });
 
+// ── GET /api/events/:id/manifest ───────────────────────────────────────────
+// Hosting chef views registered diner manifest with dietary notes and door check-in status
+router.get('/:id/manifest', verifyToken, async (req, res) => {
+  try {
+    const { rows: eRows } = await pool.query(
+      `SELECT e.id, e.title, b.chef_id
+       FROM events e
+       JOIN bookings b ON b.id = e.booking_id
+       WHERE e.id = $1`,
+      [req.params.id]
+    );
+    if (!eRows.length) return res.status(404).json({ error: 'Event not found.' });
+    if (eRows[0].chef_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Only the hosting chef can access this guest manifest.' });
+    }
+
+    const { rows } = await pool.query(
+      `SELECT t.id, t.ref_no, t.quantity, t.dietary_notes, t.checked_in, t.checked_in_at, t.created_at,
+              u.name AS guest_name, u.email AS guest_email
+       FROM tickets t
+       JOIN users u ON u.id = t.attendee_id
+       WHERE t.event_id = $1
+       ORDER BY t.created_at ASC`,
+      [req.params.id]
+    );
+    return res.json({ manifest: rows });
+  } catch (err) {
+    console.error('GET /api/events/:id/manifest:', err.message);
+    return res.status(500).json({ error: 'Could not fetch guest manifest.' });
+  }
+});
+
 // ── PATCH /api/events/:id/verify ───────────────────────────────────────────
 router.patch('/:id/verify', verifyToken, requireRole('admin'), async (req, res) => {
   try {

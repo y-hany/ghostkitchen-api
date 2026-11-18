@@ -22,14 +22,21 @@ var KITCHEN_PHOTOS = [
   'https://images.unsplash.com/photo-1578474846511-04ba529f0b88?auto=format&fit=crop&w=800&q=80',
   'https://images.unsplash.com/photo-1590736969955-71cc94801759?auto=format&fit=crop&w=800&q=80',
   'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80'
+  'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1581299894007-aaa50297cf16?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1541544741938-0af808871cc0?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1556912173-3bb406ef7e77?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1595278069441-2cf29f8005a4?auto=format&fit=crop&w=800&q=80'
 ];
 
 var EVENT_PHOTOS = [
   'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&w=800&q=80',
   'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
   'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
-  'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80'
+  'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80'
 ];
 
 var S, flash = null;
@@ -418,12 +425,12 @@ function renderFilteredEvents() {
     return;
   }
 
-  grid.innerHTML = filtered.map(ev => {
+  grid.innerHTML = filtered.map((ev, idx) => {
     var left = ev.seats_left != null ? ev.seats_left : ev.capacity;
     var total = ev.capacity || 20;
     var sold = total - left;
     var pct = Math.max(0, Math.min(100, Math.round((sold / total) * 100)));
-    var photo = hashPhoto(ev.title || ev.id, EVENT_PHOTOS);
+    var photo = EVENT_PHOTOS[idx % EVENT_PHOTOS.length];
     var dateStr = ev.starts_at ? new Date(ev.starts_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Upcoming Date';
     var f = flash && flash.id === ev.id;
     var cleanChef = (ev.chef_name || 'Guest Chef').replace(/^chef\s+/i, '').trim();
@@ -467,8 +474,16 @@ function renderFilteredEvents() {
               <button type="button" class="stepper-btn" data-act="step-up" ${left > 1 ? '' : 'disabled'}>+</button>
             </div>
             <button type="submit" class="btn-reserve" ${left ? '' : 'disabled'}>
-              ${left ? `Reserve Pop-up Seats · <span class="total">${fmt(ev.ticket_price)}</span>` : 'Sold Out'}
+              ${left ? `Reserve · <span class="total">${fmt(ev.ticket_price)}</span>` : 'Sold Out'}
             </button>
+          </div>
+          <input name="dietary_notes" type="text" placeholder="Dietary notes / allergies (optional)" style="width:100%;font-size:12px;padding:7px 12px;margin-top:8px;border-radius:8px;border:1px solid var(--line);background:var(--card-subtle);color:var(--text);font-family:inherit">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:12px">
+            <button type="button" data-act="share-event" data-id="${ev.id}" data-title="${esc(ev.title)}" style="background:none;border:none;color:var(--muted);cursor:pointer;padding:0;font-size:12px;display:inline-flex;align-items:center;gap:4px">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              Share Supper Club
+            </button>
+            <span class="muted" style="font-size:11.5px">InstaPay · Cards · Wallets</span>
           </div>
         </form>
       </div>
@@ -667,11 +682,11 @@ function renderFilteredKitchens() {
     return;
   }
 
-  kl.innerHTML = filtered.map(k => {
+  kl.innerHTML = filtered.map((k, idx) => {
     var sl = S.slots.filter(s => s.kitchen_id === k.id);
     var st = k.verification_status || k.status || 'pending';
     var equip = k.equipment || k.equip || [];
-    var photo = hashPhoto(k.name || k.id, KITCHEN_PHOTOS);
+    var photo = KITCHEN_PHOTOS[idx % KITCHEN_PHOTOS.length];
     var openSlots = sl.filter(s => s.status !== 'booked');
 
     return `
@@ -718,8 +733,8 @@ function renderFilteredKitchens() {
         </div>
 
         <div class="row" style="margin-top:14px;gap:8px">
-          <button class="ghost" data-act="kitchen-detail" data-id="${k.id}" style="flex:1">View Details & Rules</button>
-          <button data-act="kitchen-detail" data-id="${k.id}" style="flex:1">Request Shift Booking</button>
+          <button class="ghost" data-act="kitchen-detail" data-id="${k.id}" data-photo="${photo}" style="flex:1">View Details & Rules</button>
+          <button data-act="kitchen-detail" data-id="${k.id}" data-photo="${photo}" style="flex:1">Request Shift Booking</button>
         </div>
       </div>
     `;
@@ -727,12 +742,12 @@ function renderFilteredKitchens() {
 }
 
 // ── KITCHEN DETAIL DRAWER / MODAL ───────────────────────────────────────────
-function openKitchenDetail(kId) {
+function openKitchenDetail(kId, cardPhoto) {
   var k = by(S.kitchens, kId);
   if (!k) return;
 
   var sl = S.slots.filter(s => s.kitchen_id === k.id);
-  var photo = hashPhoto(k.name || k.id, KITCHEN_PHOTOS);
+  var photo = cardPhoto || hashPhoto(k.name || k.id, KITCHEN_PHOTOS);
   var equip = k.equipment || k.equip || [];
   var st = k.verification_status || k.status || 'pending';
   var openSlots = sl.filter(s => s.status !== 'booked');
@@ -829,6 +844,63 @@ function openKitchenDetail(kId) {
   openModal(k.name, modalHtml);
 }
 
+// ── CHEF GUEST MANIFEST MODAL ────────────────────────────────────────────────
+async function openManifestModal(eventId, eventTitle) {
+  openModal(`Guest Manifest · ${esc(eventTitle)}`, `<div class="card empty">${skeletonCards(2)}</div>`);
+  try {
+    var data = await api('GET', '/events/' + eventId + '/manifest');
+    var list = data.manifest || [];
+    var totalDiners = list.reduce((sum, item) => sum + item.quantity, 0);
+    var checkedInDiners = list.filter(item => item.checked_in).reduce((sum, item) => sum + item.quantity, 0);
+
+    var html = `
+      <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;background:var(--card-subtle);padding:12px 16px;border-radius:10px;border:1px solid var(--line)">
+        <div>
+          <b style="font-size:16px">${totalDiners} Confirmed Diners</b>
+          <div class="muted" style="font-size:12px">${checkedInDiners} arrived at the door (${Math.round((checkedInDiners / (totalDiners || 1)) * 100)}%)</div>
+        </div>
+        <span class="badge ${checkedInDiners === totalDiners && totalDiners > 0 ? 'approved' : 'pending'}">${checkedInDiners} / ${totalDiners} checked in</span>
+      </div>
+
+      <div style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:10px">
+    `;
+
+    if (!list.length) {
+      html += '<div class="card empty"><p class="muted">No guest reservations for this pop-up dinner yet.</p></div>';
+    } else {
+      html += list.map(m => `
+        <div class="card" style="margin:0;padding:14px;border:1px solid var(--line);background:var(--card)">
+          <div class="row" style="align-items:center">
+            <div>
+              <b style="font-size:15px">${esc(m.guest_name)}</b>
+              <div class="muted" style="font-size:12px">${esc(m.guest_email)} · Pass #T-${m.ref_no}</div>
+            </div>
+            <div style="text-align:right">
+              <span class="chip" style="font-weight:700">${m.quantity} seat${m.quantity > 1 ? 's' : ''}</span>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px;align-items:center;justify-content:space-between">
+            <div>
+              ${m.dietary_notes ? `<span class="badge warning" style="font-size:11px">⚠️ ${esc(m.dietary_notes)}</span>` : '<span class="muted" style="font-size:12px">No dietary restrictions</span>'}
+            </div>
+            <button type="button" class="${m.checked_in ? 'ghost' : ''}" data-act="checkin-guest" data-event-id="${eventId}" data-ticket-id="${m.id}" data-event-title="${esc(eventTitle)}" style="font-size:12px;padding:5px 14px">
+              ${m.checked_in ? '✓ Checked In' : 'Mark Arrived'}
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    html += '</div>';
+    var mc = $1('#modalContent');
+    if (mc) mc.innerHTML = html;
+
+  } catch (err) {
+    var mc = $1('#modalContent');
+    if (mc) mc.innerHTML = `<div class="card empty"><p class="err">${esc(err.message)}</p></div>`;
+  }
+}
+
 // ── VIEW 3: DINER TICKETS & RESERVATIONS ────────────────────────────────────
 async function renderTicketsView() {
   if (role() === 'guest') {
@@ -865,6 +937,7 @@ async function renderTicketsView() {
 
     feed.innerHTML = tickets.map(t => {
       var dateStr = t.starts_at ? new Date(t.starts_at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Confirmed date';
+      var mapsQuery = encodeURIComponent((t.kitchen_name ? t.kitchen_name + ', ' : '') + (t.kitchen_address || 'Cairo'));
       return `
         <div class="card ticket-card">
           <div class="row" style="margin-bottom:6px">
@@ -872,7 +945,7 @@ async function renderTicketsView() {
               <span class="ticket-badge">DINING ADMISSION PASS</span>
               <h3 style="margin:4px 0 0;font-size:19px;font-weight:800">${esc(t.event_title)}</h3>
             </div>
-            ${B('approved', 'Confirmed')}
+            ${B('approved', t.checked_in ? '✓ Checked In' : 'Confirmed')}
           </div>
           <div class="ticket-divider"></div>
           <div class="ticket-body">
@@ -881,9 +954,9 @@ async function renderTicketsView() {
               <b>${ICONS.cal} ${dateStr}</b>
             </div>
             <div class="ticket-info">
-              <span>Venue & Chef</span>
-              <b>${ICONS.pin} ${esc(t.kitchen_name)}</b>
-              <div class="muted" style="font-size:12.5px;margin-top:2px">${ICONS.chef} Chef ${esc(t.chef_name)}</div>
+              <span>Host Chef</span>
+              <b>${ICONS.chef} Chef ${esc(t.chef_name)}</b>
+              <div class="muted" style="font-size:12px;margin-top:2px">${esc(t.kitchen_name)}</div>
             </div>
             <div class="ticket-info">
               <span>Reserved Seats</span>
@@ -892,6 +965,43 @@ async function renderTicketsView() {
             <div class="ticket-info">
               <span>Total Paid</span>
               <b class="price" style="font-size:18px">${fmt(t.total_price)}</b>
+            </div>
+            <div class="ticket-info" style="grid-column: 1 / -1;margin-top:6px;padding-top:8px;border-top:1px solid var(--line-subtle)">
+              <span style="display:flex;align-items:center;gap:6px">
+                <span class="badge approved" style="font-size:10px;padding:2px 7px">Revealed Venue Street Address</span>
+              </span>
+              <div style="font-size:14px;color:var(--text);font-weight:700;margin-top:3px">
+                ${ICONS.pin} ${esc(t.kitchen_address || t.kitchen_name)}
+              </div>
+              <a href="https://www.google.com/maps/search/?api=1&query=${mapsQuery}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--accent);text-decoration:none;margin-top:4px;font-weight:600">
+                Open in Google Maps ↗
+              </a>
+              ${t.dietary_notes ? `<div class="muted" style="font-size:12px;margin-top:4px">Dietary notes: <i>${esc(t.dietary_notes)}</i></div>` : ''}
+            </div>
+          </div>
+          <div class="ticket-qr-section">
+            <svg viewBox="0 0 100 100" width="64" height="64" style="background:#fff;padding:4px;border-radius:6px;flex-shrink:0">
+              <rect width="100" height="100" fill="#fff"/>
+              <rect x="10" y="10" width="24" height="24" fill="#111"/>
+              <rect x="14" y="14" width="16" height="16" fill="#fff"/>
+              <rect x="18" y="18" width="8" height="8" fill="#111"/>
+              <rect x="66" y="10" width="24" height="24" fill="#111"/>
+              <rect x="70" y="14" width="16" height="16" fill="#fff"/>
+              <rect x="74" y="18" width="8" height="8" fill="#111"/>
+              <rect x="10" y="66" width="24" height="24" fill="#111"/>
+              <rect x="14" y="70" width="16" height="16" fill="#fff"/>
+              <rect x="18" y="74" width="8" height="8" fill="#111"/>
+              <rect x="42" y="14" width="8" height="8" fill="#111"/>
+              <rect x="54" y="24" width="8" height="8" fill="#111"/>
+              <rect x="42" y="42" width="16" height="16" fill="#111"/>
+              <rect x="66" y="46" width="8" height="16" fill="#111"/>
+              <rect x="78" y="66" width="12" height="8" fill="#111"/>
+              <rect x="46" y="68" width="12" height="18" fill="#111"/>
+              <rect x="66" y="78" width="20" height="8" fill="#111"/>
+            </svg>
+            <div style="font-size:12.5px">
+              <b>Fast-Track Door Check-in</b>
+              <div class="muted" style="margin-top:2px">Present this admission pass & QR code to Chef ${esc(t.chef_name)} at the entrance.</div>
             </div>
           </div>
           <div class="ticket-footer">
@@ -978,12 +1088,15 @@ async function renderChefView() {
         <div class="card">
           <div class="row">
             <b class="kt" style="font-size:18px">${esc(ev.title)}</b>
-            ${ev.booking_status === 'approved' ? B('approved', 'Live on Marketplace') : B('pending', 'Awaiting Kitchen Host Approval')}
+            ${ev.verification_status === 'verified' ? B('approved', 'Live on Marketplace') : B('pending', 'Awaiting Admin Review')}
           </div>
           <div class="muted" style="margin:4px 0 8px">${ICONS.pin} ${esc(ev.kitchen_name)}</div>
           <div class="row">
             <span>Ticket Price: <b>${fmt(ev.ticket_price)}</b></span>
             <span class="muted">${ev.seats_sold || 0} of ${ev.capacity} seats sold</span>
+          </div>
+          <div class="row act" style="margin-top:12px;gap:8px">
+            <button class="ghost" data-act="view-manifest" data-id="${ev.id}" data-title="${esc(ev.title)}">📋 Guest Manifest & Check-in</button>
           </div>
         </div>
       `).join('');
@@ -1600,7 +1713,43 @@ document.addEventListener('click', async e => {
 
   // Kitchen Detail Drawer
   if (a === 'kitchen-detail') {
-    openKitchenDetail(id);
+    openKitchenDetail(id, b.dataset.photo);
+    return;
+  }
+
+  // Share Event
+  if (a === 'share-event') {
+    var shareUrl = location.origin + location.pathname + '#events';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        toast('Supper club link copied to clipboard!');
+      }).catch(() => {
+        toast('Share link: ' + shareUrl);
+      });
+    } else {
+      toast('Share link: ' + shareUrl);
+    }
+    return;
+  }
+
+  // View Chef Manifest
+  if (a === 'view-manifest') {
+    openManifestModal(b.dataset.id, b.dataset.title);
+    return;
+  }
+
+  // Check in guest at the door
+  if (a === 'checkin-guest') {
+    var tid = b.dataset.ticketId;
+    var eid = b.dataset.eventId;
+    var etitle = b.dataset.eventTitle;
+    try {
+      await api('PATCH', '/tickets/' + tid + '/checkin');
+      toast('Door check-in status updated!');
+      openManifestModal(eid, etitle);
+    } catch (err) {
+      toast('Check-in error: ' + err.message);
+    }
     return;
   }
 
@@ -1863,9 +2012,11 @@ document.addEventListener('submit', async e => {
       if (!q.value.trim() || isNaN(n) || n < 1) return fail(f, 'Enter how many seats you would like to reserve.', q);
       if (n > left) return fail(f, 'Only ' + left + ' seats remain.', q);
 
+      var notes = x.dietary_notes ? x.dietary_notes.value.trim() : '';
       var res = await api('POST', '/tickets', {
         event_id: f.dataset.id,
-        quantity: n
+        quantity: n,
+        dietary_notes: notes || null
       });
       flash = { id: f.dataset.id, text: n + (n > 1 ? ' seats' : ' seat') + ' for ' + fmt(res.ticket.total_price) };
       toast('Seats reserved! Ticket confirmation #T-' + res.ticket.ref_no);

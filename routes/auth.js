@@ -156,6 +156,27 @@ router.post('/demo-login', async (req, res) => {
   }
 });
 
+// ── PATCH /api/switch-role ──────────────────────────────────────────────────
+router.patch('/switch-role', verifyToken, async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['host', 'chef', 'attendee'].includes(role)) {
+      return res.status(400).json({ error: 'Role must be host, chef, or attendee.' });
+    }
+    const { rows } = await pool.query(
+      `UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name, email, role, created_at, updated_at`,
+      [role, req.user.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'User not found.' });
+    const user = rows[0];
+    const token = signToken(user);
+    return res.json({ token, user: safeUser(user) });
+  } catch (err) {
+    console.error('PATCH /api/switch-role:', err.message);
+    return res.status(500).json({ error: 'Could not switch role.' });
+  }
+});
+
 // ── GET /api/me ───────────────────────────────────────────────────────────────
 
 router.get('/me', verifyToken, async (req, res) => {
