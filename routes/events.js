@@ -85,7 +85,10 @@ router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
 
     // Booking must belong to this chef
     const { rows: bRows } = await pool.query(
-      'SELECT id, chef_id, status FROM bookings WHERE id = $1',
+      `SELECT b.id, b.chef_id, b.status, s.start_time
+       FROM bookings b
+       JOIN slots s ON s.id = b.slot_id
+       WHERE b.id = $1`,
       [booking_id]
     );
     if (!bRows.length)
@@ -103,13 +106,15 @@ router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
     if (existing.length)
       return res.status(409).json({ error: 'An event already exists for this booking.' });
 
-    // Parse optional starts_at
+    // Parse optional starts_at or default to the booked kitchen shift slot time
     let startsAt = null;
     if (starts_at) {
       const d = new Date(starts_at);
       if (isNaN(d.getTime()))
         return res.status(400).json({ error: 'starts_at is not a valid date.' });
       startsAt = d.toISOString();
+    } else if (bRows[0].start_time) {
+      startsAt = new Date(bRows[0].start_time).toISOString();
     }
 
     const { rows } = await pool.query(

@@ -386,6 +386,7 @@ async function renderEventsView() {
       <div id="dinerDistrictChips" class="diner-district-chips"></div>
     </div>
 
+    <div id="chefEventsNotice"></div>
     <div id="eventGrid">${skeletonCards(2)}</div>
   `;
 
@@ -395,12 +396,19 @@ async function renderEventsView() {
     var fetches = [api('GET', '/events')];
     if (role() === 'attendee') {
       fetches.push(api('GET', '/tickets'));
+    } else if (role() === 'chef') {
+      fetches.push(api('GET', '/events/mine').catch(() => ({ events: [] })));
     }
-    var [eData, tData] = await Promise.all(fetches);
+    var results = await Promise.all(fetches);
+    var eData = results[0];
     S.events = eData.events || [];
-    if (tData && tData.tickets) {
-      S.tickets = tData.tickets;
+    if (role() === 'attendee' && results[1] && results[1].tickets) {
+      S.tickets = results[1].tickets;
       updateNav();
+    }
+    S.chefPendingEvents = [];
+    if (role() === 'chef' && results[1] && results[1].events) {
+      S.chefPendingEvents = results[1].events.filter(e => e.verification_status === 'pending');
     }
     renderFilteredEvents();
   } catch(err) {
@@ -421,6 +429,28 @@ function renderFilteredEvents() {
   var grid = $1('#eventGrid');
   if (!grid) return;
 
+  var noticeEl = $1('#chefEventsNotice');
+  if (noticeEl) {
+    if (S.chefPendingEvents && S.chefPendingEvents.length > 0) {
+      noticeEl.innerHTML = `
+        <div class="banner" style="margin-bottom:20px;border-left:4px solid var(--accent);background:rgba(245,158,11,0.08);padding:14px 16px;border-radius:12px;border:1px solid rgba(245,158,11,0.25)">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+            <div>
+              <div style="font-weight:700;color:var(--accent);font-size:14px">⏳ Chef Notice: ${S.chefPendingEvents.length} Pop-up Dinner Awaiting Admin Verification</div>
+              <div class="muted" style="font-size:12.5px;margin-top:2px">Your dinner <b>"${esc(S.chefPendingEvents[0].title)}"</b> requires Platform Admin verification before appearing publicly to diners.</div>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <a class="btn" href="#chef-bookings" style="height:32px;line-height:30px;padding:0 12px;font-size:12px">Chef Hub</a>
+              <button class="nav-cta" data-act="demo" data-role="admin" style="height:32px;padding:0 14px;font-size:12px;background:#10b981;border-color:#10b981;color:#fff;font-weight:700">Switch to Admin & Approve</button>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      noticeEl.innerHTML = '';
+    }
+  }
+
   var events = S.events || [];
   var dFilter = S.dinerDistrict || 'All Cairo';
 
@@ -431,6 +461,12 @@ function renderFilteredEvents() {
     }
     return true;
   });
+
+  // Prepend chef's pending preview events if logged in as chef
+  if (S.chefPendingEvents && S.chefPendingEvents.length > 0) {
+    var previews = S.chefPendingEvents.map(e => Object.assign({}, e, { isPendingPreview: true }));
+    filtered = previews.concat(filtered);
+  }
 
   if (!filtered.length) {
     grid.innerHTML = `
@@ -450,10 +486,52 @@ function renderFilteredEvents() {
     var sold = total - left;
     var pct = Math.max(0, Math.min(100, Math.round((sold / total) * 100)));
     var photo = EVENT_PHOTOS[idx % EVENT_PHOTOS.length];
-    var dateStr = ev.starts_at ? new Date(ev.starts_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Upcoming Date';
+    var dateStr = (ev.starts_at || ev.start_time) ? new Date(ev.starts_at || ev.start_time).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Upcoming Date';
     var f = flash && flash.id === ev.id;
-    var cleanChef = (ev.chef_name || 'Guest Chef').replace(/^chef\s+/i, '').trim();
+    var cleanChef = (ev.chef_name || me() || 'Guest Chef').replace(/^chef\s+/i, '').trim();
     var district = (ev.address || '').split(',')[1] || (ev.kitchen_name || '').split('–')[1] || 'Dokki';
+
+    if (ev.isPendingPreview) {
+      return `
+        <div class="card lift" style="border:2px dashed rgba(245,158,11,0.7);background:rgba(245,158,11,0.02)">
+          <div class="card-media">
+            <img class="card-img" src="${photo}" alt="${esc(ev.title)}" loading="lazy">
+            <div class="card-badge-top" style="background:#f59e0b;color:#000;font-weight:800">⏳ Your Pop-up · Pending Admin Review</div>
+            <div class="card-badge-bottom">${ICONS.pin} ${esc(ev.kitchen_name || 'Kitchen')}</div>
+          </div>
+          
+          <div class="row" style="margin-bottom:4px">
+            <b class="kt" style="font-size:19px">${esc(ev.title)}</b>
+            <div class="price" style="font-size:19px">${fmt(ev.ticket_price)} <span class="muted" style="font-size:12px">/ seat</span></div>
+          </div>
+
+          <div class="muted" style="margin:4px 0 10px;font-size:13px">${ICONS.chef} Hosted by You (Chef ${esc(cleanChef)}) · ${ICONS.cal} ${dateStr}</div>
+
+          <div class="seat-progress-area">
+            <div class="seat-progress-info">
+              <span class="seat-claimed-label"><b>0</b> of ${total} seats claimed</span>
+              <span class="seat-left-pct" style="color:var(--accent)">Pending Admin Approval</span>
+            </div>
+            <div class="seat-progress-bar">
+              <div class="seat-progress-fill" style="width:0%"></div>
+            </div>
+          </div>
+
+          ${formatMenu(ev.menu_description)}
+
+          <div style="margin-top:14px;padding:12px 14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px">
+            <div style="font-size:12.5px;color:var(--text);margin-bottom:10px">
+              <b>Pop-up Pending Verification:</b> Only visible to you. Diners cannot see or book seats until approved.
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <button class="nav-cta" data-act="quick-verify-event" data-id="${ev.id}" style="height:32px;padding:0 14px;font-size:12px;background:#10b981;border-color:#10b981;color:#fff;font-weight:700">⚡ Quick-Approve (Demo)</button>
+              <button class="btn" data-act="demo" data-role="admin" style="height:32px;padding:0 12px;font-size:12px">Admin Console</button>
+              <a class="btn ghost" href="#chef-bookings" style="height:32px;line-height:30px;padding:0 12px;font-size:12px">View in Chef Hub</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }
 
     return `
       <div class="card lift">
@@ -1114,6 +1192,24 @@ async function renderChefView() {
             <span>Ticket Price: <b>${fmt(ev.ticket_price)}</b></span>
             <span class="muted">${ev.seats_sold || 0} of ${ev.capacity} seats sold</span>
           </div>
+          ${ev.verification_status === 'pending' ? `
+            <div style="margin-top:12px;padding:12px 14px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:10px">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                <div>
+                  <b style="color:var(--accent);font-size:13px">⏳ Awaiting Platform Admin Verification</b>
+                  <div class="muted" style="font-size:12px;margin-top:2px">New pop-ups are reviewed by Admin before appearing on the public diner marketplace.</div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <button class="nav-cta" data-act="quick-verify-event" data-id="${ev.id}" style="height:32px;padding:0 12px;font-size:12px;background:#10b981;border-color:#10b981;color:#fff;font-weight:700">⚡ Quick-Approve (Demo)</button>
+                  <button class="btn" data-act="demo" data-role="admin" style="height:32px;padding:0 12px;font-size:12px">Switch to Admin</button>
+                </div>
+              </div>
+            </div>
+          ` : `
+            <div style="margin-top:12px;padding:8px 12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:8px;font-size:12.5px;color:var(--ok);font-weight:700">
+              ✓ Published Live on Diner Marketplace (<a href="#events" style="color:var(--ok);text-decoration:underline">View on Marketplace</a>)
+            </div>
+          `}
           <div class="row act" style="margin-top:12px;gap:8px">
             <button class="ghost" data-act="view-manifest" data-id="${ev.id}" data-title="${esc(ev.title)}">📋 Guest Manifest & Check-in</button>
           </div>
@@ -1948,6 +2044,32 @@ document.addEventListener('click', async e => {
       await api('PATCH', '/events/' + id + '/reject');
       toast('Pop-up event rejected.');
       route();
+    } else if (a === 'quick-verify-event') {
+      try {
+        toast('Approving pop-up event via admin credentials...');
+        var curToken = localStorage.getItem('gk_token');
+        var adminAuth = await api('POST', '/demo-login', { role: 'admin' });
+        localStorage.setItem('gk_token', adminAuth.token);
+        await api('PATCH', '/events/' + id + '/verify');
+        if (curToken) localStorage.setItem('gk_token', curToken);
+        toast('Supper club pop-up approved and published live!');
+        route();
+      } catch (err) {
+        toast('Quick approve error: ' + err.message);
+      }
+    } else if (a === 'quick-verify-kitchen') {
+      try {
+        toast('Verifying kitchen license via admin credentials...');
+        var curToken = localStorage.getItem('gk_token');
+        var adminAuth = await api('POST', '/demo-login', { role: 'admin' });
+        localStorage.setItem('gk_token', adminAuth.token);
+        await api('PATCH', '/kitchens/' + id + '/verify');
+        if (curToken) localStorage.setItem('gk_token', curToken);
+        toast('Kitchen license verified and listed publicly!');
+        route();
+      } catch (err) {
+        toast('Quick verify error: ' + err.message);
+      }
     }
   } catch (err) {
     toast('Action error: ' + err.message);
@@ -2032,8 +2154,8 @@ document.addEventListener('submit', async e => {
         capacity: +x.capacity.value
       });
       closeModal();
-      toast('Pop-up supper club published!');
-      setRoute('#events');
+      toast('Pop-up submitted! Awaiting Platform Admin verification before public listing.');
+      setRoute('#chef-bookings');
     }
     else if (t === 'reserve') {
       if (role() === 'guest') {
