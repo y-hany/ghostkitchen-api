@@ -1490,7 +1490,21 @@ function bCard(b, isHost) {
           <button data-act="approve" data-id="${b.id}" style="background:#10b981;border-color:#10b981;color:#fff;font-weight:700">Approve Request</button>
           <button class="bad" data-act="decline" data-id="${b.id}">Decline</button>
         </div>
-      ` : ''}
+      ` : (!isHost && b.status === 'pending' ? `
+        <div style="margin-top:12px;padding:10px 14px;background:var(--card-subtle);border:1px solid var(--line);border-radius:10px;font-size:12.5px">
+          <div style="color:var(--warn);font-weight:700;display:flex;align-items:center;gap:6px">
+            ⏳ Awaiting Host Approval
+          </div>
+          <div style="margin-top:4px;color:var(--muted);line-height:1.4">
+            The kitchen host reviews and approves requests. <b style="color:var(--text)">Testing the app?</b> Switch to <b>Host</b> in <b>Tester Mode</b> (bottom-right corner) to approve this shift!
+          </div>
+        </div>
+      ` : (!isHost && b.status === 'approved' ? `
+        <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:10px 14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:10px">
+          <span style="font-size:12.5px;color:var(--ok);font-weight:700">✓ Shift Approved & Ready for Supper Club</span>
+          <button class="nav-cta" data-act="modal-event" style="height:32px;padding:0 14px;font-size:12px">+ Host Pop-up</button>
+        </div>
+      ` : ''))}
     </div>
   `;
 }
@@ -1907,7 +1921,7 @@ document.addEventListener('click', async e => {
         updateNav();
       }
       await api('POST', '/bookings', { slot_id: id });
-      toast('Booking request sent to kitchen host!');
+      toast('Booking request sent! Switch to Host in Tester Mode to approve it.');
       closeModal();
       route();
     } else if (a === 'approve' && role() === 'host') {
