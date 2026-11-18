@@ -3,16 +3,36 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>GhostKitchen — Cairo Ghost Kitchens & Pop-up Dining</title>
+  <title>GhostKitchen & Supper Club Cairo — Commercial Kitchens & Pop-up Dining</title>
+  
+  <meta name="description" content="Cairo's curated network connecting licensed commercial kitchens with guest chefs, culinary creators, and exclusive pop-up supper clubs.">
+  <meta name="keywords" content="Cairo ghost kitchens, Cairo supper clubs, pop-up dinner Cairo, commercial kitchen rental, culinary space Zamalek Maadi Dokki">
+  
+  <!-- OpenGraph Metadata -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="GhostKitchen & Supper Club Cairo">
+  <meta property="og:description" content="Discover secret Cairo supper clubs or rent licensed commercial kitchens by the hour during off-peak shifts.">
+  <meta property="og:image" content="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80">
+  <meta property="og:url" content="https://ghostkitchen-api.vercel.app">
+  
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="GhostKitchen & Supper Club Cairo">
+  <meta name="twitter:description" content="Discover secret Cairo supper clubs or rent licensed commercial kitchens by the hour.">
+  <meta name="twitter:image" content="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b84324' stroke-width='2.2'%3E%3Cpath d='M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0'/%3E%3Cpath d='M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2'/%3E%3Cpath d='M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8'/%3E%3Cpath d='M18 8a6 6 0 1 1-12 0'/%3E%3Cpath d='M12 18v4'/%3E%3Cpath d='M8 22h8'/%3E%3C/svg%3E">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Top Navigation Bar with SVG Icons -->
-  <nav>
-    <a class="brand" href="#kitchens">
+
+  <!-- Top Navigation Bar (Dynamically updated via RBAC) -->
+  <nav id="topNav">
+    <a class="brand" href="#events">
       <svg class="ico-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
         <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
@@ -21,253 +41,48 @@
         <path d="M12 18v4"/>
         <path d="M8 22h8"/>
       </svg>
-      <span>GhostKitchen</span>
+      <div class="brand-text">
+        <span class="brand-name">GhostKitchen</span>
+        <span class="brand-sub">Pop-ups & Supper Clubs</span>
+      </div>
     </a>
     
-    <div class="links">
-      <a href="#login" data-tab="login">
-        <svg class="nav-ico" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
-        <span>Profile</span>
-      </a>
-      <a href="#kitchens" data-tab="kitchens">
-        <svg class="nav-ico" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        <span>Kitchens</span>
-      </a>
-      <a href="#host" data-roles="host" data-tab="host">
-        <svg class="nav-ico" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-        <span>Host</span>
-      </a>
-      <a href="#chef" data-roles="chef" data-tab="chef">
-        <svg class="nav-ico" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.8V4a2 2 0 0 1 4 0v9.8"/><path d="M14 13.8V4a2 2 0 0 1 4 0v9.8"/><path d="M10 10.5V4a2 2 0 0 1 4 0v6.5"/><path d="M19 14a6 6 0 1 1-14 0"/><path d="M5 14h14v7H5z"/></svg>
-        <span>Chef</span>
-      </a>
-      <a href="#event" data-tab="event">
-        <svg class="nav-ico" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <span>Events</span>
-      </a>
-      <a href="#tickets" data-roles="guest attendee chef" data-tab="tickets">
-        <svg class="nav-ico" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><line x1="13" y1="5" x2="13" y2="19" stroke-dasharray="2 2"/></svg>
-        <span>Tickets</span>
-      </a>
-      <a href="#admin" data-roles="admin" data-tab="admin">
-        <svg class="nav-ico" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-        <span>Admin</span>
-      </a>
-    </div>
+    <!-- Dynamic RBAC Navigation Links -->
+    <div class="links" id="navLinks"></div>
 
+    <!-- Actions: Theme Toggle & Role Badge / Auth Action -->
     <div class="nav-actions">
-      <!-- Dark / Light Theme Toggle -->
-      <button type="button" class="theme-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">
+      <button type="button" class="theme-btn" id="themeToggle" title="Toggle dark/light mode" aria-label="Toggle theme">
         <svg class="theme-ico sun-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
       </button>
-      <a class="role-chip" href="#login" id="roleChip">Guest</a>
+      <div id="navUserAction"></div>
     </div>
   </nav>
 
-  <!-- Profile & Login Page -->
-  <main data-page="login">
-    <div class="hero">
-      <h1>Rent idle kitchens.<br>Host unforgettable dinners.</h1>
-      <p>Connecting licensed commercial kitchens in Cairo with culinary creators and popup dinners.</p>
-    </div>
-    
-    <div id="session" style="margin-top:14px"></div>
+  <!-- Single Container for Dynamic Views (No hidden Admin/Host code in DOM!) -->
+  <main id="appView"></main>
 
-    <h2>Quick demo roles</h2>
-    <div class="demo">
-      <button class="ghost demo-btn" data-act="demo" data-role="host">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-        <span>Host Manager</span>
-      </button>
-      <button class="ghost demo-btn" data-act="demo" data-role="chef">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14a6 6 0 1 1-14 0"/><path d="M5 14h14v7H5z"/></svg>
-        <span>Guest Chef</span>
-      </button>
-      <button class="ghost demo-btn" data-act="demo" data-role="attendee">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>
-        <span>Event Attendee</span>
-      </button>
-      <button class="ghost demo-btn" data-act="demo" data-role="admin">
-        <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        <span>Platform Admin</span>
-      </button>
-    </div>
+  <!-- Modal Container for Clean Creation Flows -->
+  <div id="modalContainer" hidden></div>
 
-    <h2>Sign in / Create Account</h2>
-    <form class="card" novalidate data-form="login">
-      <label>Full Name</label>
-      <input name="name" type="text" value="Nour Hassan" placeholder="Your name">
-      
-      <label>Email Address</label>
-      <input name="email" type="email" value="nour@example.com" placeholder="you@example.com">
-      
-      <label>Password</label>
-      <input name="password_hash" type="password" value="password123" placeholder="Choose a password">
-      
-      <label>Select Role</label>
-      <div class="seg">
-        <label><input type="radio" name="role" value="host"><span>Host</span></label>
-        <label><input type="radio" name="role" value="chef" checked><span>Chef</span></label>
-        <label><input type="radio" name="role" value="attendee"><span>Attendee</span></label>
-        <label><input type="radio" name="role" value="admin"><span>Admin</span></label>
+  <!-- Reviewer & Staging Drawer (Discreet floating role tester for portfolio reviewers) -->
+  <aside id="demoDrawer" class="demo-drawer">
+    <div class="demo-drawer-bar">
+      <div class="demo-drawer-label">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        <span>Reviewer Persona Switcher</span>
       </div>
-      <div class="msg err" role="alert" hidden></div>
-      <button type="submit">Continue</button>
-    </form>
-    
-    <p class="muted center">Connected to Live PostgreSQL on Supabase Cloud</p>
-  </main>
-
-  <!-- Kitchens Browse Page -->
-  <main data-page="kitchens" hidden>
-    <h1>Commercial Kitchens</h1>
-    <p class="sub">Browse verified commercial kitchens with off-peak availability across Cairo.</p>
-    
-    <div id="sysStats"></div>
-
-    <!-- Search & Quick Filters -->
-    <div class="search-box">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="search-ico"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="search" id="kSearch" placeholder="Search by name, Dokki, Zamalek, Maadi..." autocomplete="off">
-    </div>
-
-    <div class="filter-row">
-      <div id="chips" class="chips"></div>
-    </div>
-
-    <p class="muted" id="count"></p>
-    <div id="kitchenList"></div>
-  </main>
-
-  <!-- Host Dashboard -->
-  <main data-page="host" data-roles="host" hidden>
-    <h1>Host Dashboard</h1>
-    <p class="sub" id="hostSub">Manage your kitchens, availability slots, and guest chef booking requests.</p>
-    <div id="hostStats"></div>
-
-    <h2>Incoming Booking Requests</h2>
-    <div id="hostBookings"></div>
-
-    <h2>List a New Commercial Kitchen</h2>
-    <form class="card" novalidate data-form="kitchen">
-      <label>Kitchen Name</label>
-      <input name="name" type="text" placeholder="e.g. Garden City Culinary Studio">
-      
-      <label>Street Address & District</label>
-      <input name="address" type="text" placeholder="e.g. 14 Kasr El Aini, Garden City, Cairo">
-      
-      <div class="grid2">
-        <div>
-          <label>Commercial License / Permit</label>
-          <input name="license_info" type="text" placeholder="e.g. LIC-5890 · Health ministry">
-        </div>
-        <div>
-          <label>Hourly Rate (EGP)</label>
-          <input name="hourly_rate" type="number" placeholder="300" inputmode="numeric" min="1">
-        </div>
+      <div class="demo-drawer-roles">
+        <button class="demo-role-btn" data-act="demo" data-role="attendee" title="Experience app as Dinner Guest">🍽️ Diner</button>
+        <button class="demo-role-btn" data-act="demo" data-role="chef" title="Experience app as Guest Chef">🧑‍🍳 Chef</button>
+        <button class="demo-role-btn" data-act="demo" data-role="host" title="Experience app as Commercial Kitchen Host">🏢 Kitchen Host</button>
+        <button class="demo-role-btn" data-act="demo" data-role="admin" title="Experience app as Platform Administrator">🛡️ Admin</button>
       </div>
-      
-      <label>Equipment Available (comma separated)</label>
-      <input name="equip" type="text" placeholder="Walk-in fridge, Convection ovens, Gas range">
-      
-      <div class="msg err" role="alert" hidden></div>
-      <button type="submit">Submit Kitchen for Review</button>
-    </form>
+      <button class="demo-drawer-toggle" id="demoToggle" title="Minimize / Expand reviewer controls">✕</button>
+    </div>
+  </aside>
 
-    <h2>Add Availability Slot</h2>
-    <form class="card" novalidate data-form="slot">
-      <label>Select Kitchen</label>
-      <select name="kitchen_id" id="slotKitchen"></select>
-      
-      <div class="grid2">
-        <div>
-          <label>Start Time</label>
-          <input name="start_time" type="datetime-local">
-        </div>
-        <div>
-          <label>End Time</label>
-          <input name="end_time" type="datetime-local">
-        </div>
-      </div>
-      
-      <label>Initial Status</label>
-      <select name="status">
-        <option value="open">Open for bookings</option>
-        <option value="booked">Booked</option>
-      </select>
-      
-      <div class="msg err" role="alert" hidden></div>
-      <button type="submit">Publish Slot</button>
-    </form>
-  </main>
-
-  <!-- Chef Dashboard -->
-  <main data-page="chef" data-roles="chef" hidden>
-    <h1>Chef Dashboard</h1>
-    <p class="sub">Track your slot requests, booking approvals, and published pop-up dinners.</p>
-    <div id="chefStats"></div>
-
-    <h2>My Kitchen Bookings</h2>
-    <div id="chefBookings"></div>
-
-    <h2>My Published Events</h2>
-    <div id="chefEvents"></div>
-
-    <h2>Publish a Pop-up Dining Event</h2>
-    <p class="sub" id="evNote" hidden>Request a kitchen slot first, then publish your event here once approved. <a href="#kitchens" data-go="kitchens">Browse kitchens</a></p>
-    
-    <form class="card" novalidate data-form="event">
-      <fieldset id="evFields">
-        <label>Select Approved Booking</label>
-        <select name="booking_id" id="evBooking"></select>
-        
-        <label>Pop-up Title</label>
-        <input name="title" type="text" placeholder="e.g. Koshary Reimagined: 5-Course Tasting Menu">
-        
-        <label>Menu Concept & Dishes</label>
-        <textarea name="menu_description" rows="3" placeholder="Describe the courses, cuisine style, and dietary notes..."></textarea>
-        
-        <div class="grid2">
-          <div>
-            <label>Price per Seat (EGP)</label>
-            <input name="ticket_price" type="number" value="450" inputmode="numeric" min="1">
-          </div>
-          <div>
-            <label>Total Seating Capacity</label>
-            <input name="capacity" type="number" value="20" inputmode="numeric" min="1">
-          </div>
-        </div>
-        
-        <div class="msg err" role="alert" hidden></div>
-        <button type="submit">Publish Pop-up Event</button>
-      </fieldset>
-    </form>
-  </main>
-
-  <!-- Events Browse Page -->
-  <main data-page="event" hidden>
-    <h1>Pop-up Dining Events</h1>
-    <p class="sub">Reserve seats at intimate supper clubs and culinary experiences across Cairo.</p>
-    <div id="eventList"></div>
-  </main>
-
-  <!-- My Tickets Page -->
-  <main data-page="tickets" data-roles="guest attendee chef" hidden>
-    <h1>My Reservations</h1>
-    <p class="sub">Your confirmed pop-up dinner reservations and admission tickets.</p>
-    <div id="ticketList"></div>
-  </main>
-
-  <!-- Admin Console -->
-  <main data-page="admin" data-roles="admin" hidden>
-    <h1>Admin Console</h1>
-    <p class="sub">Platform overview, revenue metrics, and commercial kitchen license verifications.</p>
-    <div id="adminStats"></div>
-
-    <h2>Pending License Approvals</h2>
-    <div id="adminPending"></div>
-  </main>
-
+  <!-- App Script -->
   <script src="app.js"></script>
 </body>
 </html>

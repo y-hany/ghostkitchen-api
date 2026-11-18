@@ -1,7 +1,8 @@
 (function(){
 'use strict';
+
 var API = (window.location.origin && window.location.origin !== 'null' && window.location.protocol.indexOf('http') === 0) ? window.location.origin + '/api' : 'http://localhost:3000/api';
-var K = 'gk_state_v3', HOME = { host: 'host', chef: 'chef', attendee: 'event', admin: 'admin' };
+var K = 'gk_state_v4';
 
 var DEMO_USERS = {
   host:     { name: 'Layla Host',       email: 'host@demo.eg',     password: 'password123', role: 'host' },
@@ -11,35 +12,44 @@ var DEMO_USERS = {
 };
 
 var DISTRICTS = ['All', 'Dokki', 'Zamalek', 'Maadi', 'Heliopolis', 'Garden City', 'New Cairo'];
-var EQUIP = ['Walk-in fridge', 'Convection ovens', 'Gas range', 'Induction hobs'];
-var S, flash = null, R = {};
+var EQUIP = ['Walk-in chiller', 'Convection ovens', 'Gas range', 'Induction hobs'];
 
+var KITCHEN_PHOTOS = [
+  'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1578474846511-04ba529f0b88?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1590736969955-71cc94801759?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80'
+];
+
+var EVENT_PHOTOS = [
+  'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80'
+];
+
+var S, flash = null;
 var $ = (s, r) => [].slice.call((r || document).querySelectorAll(s)), $1 = (s, r) => (r || document).querySelector(s);
 var fmt = n => Number(n || 0).toLocaleString('en-US') + ' EGP';
 var esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 var by = (a, id) => a.filter(x => x.id === id)[0];
 
-// ── MODERN SVG ICONS ────────────────────────────────────────────────────────
+// ── VECTOR SVG ICONS ────────────────────────────────────────────────────────
 var ICONS = {
-  logo: '<svg class="ico-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a6 6 0 1 1-12 0"/><path d="M12 18v4"/><path d="M8 22h8"/></svg>',
   pin: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
   cal: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
   chef: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 13.8V4a2 2 0 0 1 4 0v9.8"/><path d="M14 13.8V4a2 2 0 0 1 4 0v9.8"/><path d="M10 10.5V4a2 2 0 0 1 4 0v6.5"/><path d="M19 14a6 6 0 1 1-14 0"/><path d="M5 14h14v7H5z"/></svg>',
   shield: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>',
-  host: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
   ticket: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/></svg>',
   sun: '<svg class="theme-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>',
   moon: '<svg class="theme-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>',
-  culinaryKitchen: '<svg viewBox="0 0 64 64" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M16 20v14a16 16 0 0 0 32 0V20"/><path d="M10 22h44"/><path d="M24 34v10a8 8 0 0 0 16 0V34"/></svg>',
-  culinaryEvent: '<svg viewBox="0 0 64 64" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 44h40M16 44a16 16 0 0 1 32 0M32 20v8M28 20h8"/><circle cx="32" cy="16" r="3"/></svg>'
+  culinaryEvent: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'
 };
 
-// ── THEME SWITCHER (DARK / LIGHT) ──────────────────────────────────────────
+// ── THEME MANAGER ───────────────────────────────────────────────────────────
 function initTheme() {
-  var saved = localStorage.getItem('gk_theme');
-  if (!saved) {
-    saved = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
-  }
+  var saved = localStorage.getItem('gk_theme') || ((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light');
   setTheme(saved);
 }
 
@@ -71,24 +81,23 @@ async function api(method, path, body) {
     });
     var data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      throw new Error(data.error || 'Server error (' + res.status + ')');
+      throw new Error(data.error || 'Request failed (' + res.status + ')');
     }
     return data;
   } catch (err) {
     if (err.message.indexOf('Failed to fetch') > -1) {
-      toast('Cannot reach API on port 3000. Is the server running?');
+      toast('Cannot connect to API service.');
     }
     throw err;
   }
 }
 
-// ── SESSION & STATE ─────────────────────────────────────────────────────────
+// ── STATE & PERSISTENCE ─────────────────────────────────────────────────────
 function initSession() {
   var saved = null;
   try { saved = JSON.parse(localStorage.getItem(K)); } catch(e){}
   S = {
     session: saved && saved.session ? saved.session : null,
-    entered: !!(saved && saved.entered),
     filters: [],
     district: 'All',
     searchQuery: '',
@@ -100,25 +109,15 @@ function initSession() {
     stats: null
   };
 }
+
 function saveSession() {
   try {
-    localStorage.setItem(K, JSON.stringify({ session: S.session, entered: S.entered }));
+    localStorage.setItem(K, JSON.stringify({ session: S.session }));
   } catch(e){}
 }
 
 var role = () => S.session ? S.session.role : 'guest';
 var me = () => S.session ? S.session.name : 'Guest';
-var bundle = () => $('[data-page]').length > 1;
-
-function go(p){
-  if(bundle()){
-    var same = location.hash === '#' + p;
-    location.hash = '#' + p;
-    if(same) route();
-  } else {
-    location.href = p + '.html';
-  }
-}
 
 function toast(m){
   var t = $1('#toast');
@@ -138,21 +137,8 @@ function B(st, txt){
   return '<span class="badge ' + (m[st] || '') + '">' + esc(txt || st) + '</span>';
 }
 
-var ART = {
-  plate: '<circle cx="48" cy="48" r="26" fill="var(--card)" stroke="var(--accent)" stroke-width="3"/><circle cx="48" cy="48" r="14" fill="none" stroke="var(--accent)" stroke-width="2" opacity=".5"/><path d="M14 30v18M18 30v18M22 30v18M18 48v20M80 30c-5 6-5 18 0 22v16" fill="none" stroke="var(--accent-d)" stroke-width="3" stroke-linecap="round"/>',
-  ticket: '<rect x="14" y="28" width="68" height="40" rx="8" fill="var(--card)" stroke="var(--accent)" stroke-width="3"/><path d="M62 31v34" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="4 4"/><path d="M26 44h24M26 54h16" stroke="var(--accent-d)" stroke-width="3" stroke-linecap="round"/>',
-  shield: '<path d="M48 18l24 8v18c0 16-10 26-24 32C34 70 24 60 24 44V26z" fill="var(--card)" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round"/><path d="M38 47l8 8 14-16" fill="none" stroke="var(--accent-d)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>'
-};
-
-function empty(k, t, p, cta){
-  return '<div class="card empty"><svg viewBox="0 0 96 96" width="96" height="96" aria-hidden="true"><circle cx="48" cy="48" r="44" fill="var(--accent-l)"/>' + ART[k] + '</svg><h2>' + t + '</h2><p>' + p + '</p>' + (cta || '') + '</div>';
-}
-
-var tiles = a => '<div class="stats">' + a.map(t => '<div class="stat"><b>' + t[0] + '</b><span>' + t[1] + '</span></div>').join('') + '</div>';
-
 function fmtSlot(s) {
-  if (s.day && s.from) return s.day + ' · ' + s.from + '–' + s.to;
-  if (!s.start_time) return 'Slot details';
+  if (!s.start_time) return 'Shift details';
   var a = new Date(s.start_time), z = new Date(s.end_time || s.start_time);
   var day = a.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   var from = a.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -161,140 +147,272 @@ function fmtSlot(s) {
 }
 
 function slotHours(s) {
-  if (s.hours) return s.hours;
   if (!s.start_time || !s.end_time) return 4;
   return Math.max(1, Math.round((new Date(s.end_time) - new Date(s.start_time)) / 36e5));
 }
 
-function banner(){
-  var st = S.stats || { kitchens_verified: 0, kitchens_pending: 0, total_bookings: 0, seats_sold: 0, revenue_egp: 0 };
-  return '<div class="banner"><div class="bn-h">' + ICONS.shield + ' Platform Overview <span class="badge">Live PostgreSQL</span></div><div class="bn-g">' +
-    [[st.kitchens_verified, 'Verified kitchens'],
-     [st.kitchens_pending, 'Awaiting review'],
-     [st.total_bookings, 'Bookings'],
-     [st.seats_sold, 'Seats sold']].map(t => '<div><b>' + t[0] + '</b><span>' + t[1] + '</span></div>').join('') +
-    '</div><div class="bn-f">Seat revenue to date: <b>' + fmt(st.revenue_egp) + '</b></div></div>';
+function hashPhoto(str, list) {
+  var h = 0;
+  for (var i = 0; i < str.length; i++) h = (h << 5) - h + str.charCodeAt(i);
+  return list[Math.abs(h) % list.length];
 }
 
-function slotRow(s, k){
-  var mine = S.bookings.filter(b => b.slot_id === s.id && (b.chef_id === S.session?.id || b.chef === me()))[0];
-  var a;
-  var hrs = slotHours(s);
-  var rate = k.hourly_rate || 250;
-  var cost = hrs * rate;
+// ── DYNAMIC RBAC NAVIGATION ─────────────────────────────────────────────────
+function updateNav() {
+  var r = role();
+  var navLinks = $1('#navLinks');
+  var userAction = $1('#navUserAction');
+  var cur = (location.hash || '#events').slice(1).split('-')[0];
 
-  if (s.status === 'booked') a = B('booked', 'Booked');
-  else if (k.verification_status !== 'verified' && k.status !== 'verified') a = '<span class="muted">Not bookable yet</span>';
-  else if (mine) a = B(mine.status, 'Request ' + mine.status);
-  else if (role() === 'chef') a = '<button data-act="request" data-id="' + s.id + '">Request Slot</button>';
-  else a = '<span class="muted">Chef account needed</span>';
-
-  return '<div class="slot"><div><div>' + fmtSlot(s) + '</div><div class="muted">' + hrs + ' hrs × ' + fmt(rate) + ' = <b>' + fmt(cost) + '</b></div></div>' + a + '</div>';
-}
-
-function kCard(k){
-  var sl = S.slots.filter(s => s.kitchen_id === k.id);
-  var st = k.verification_status || k.status || 'pending';
-  var equip = k.equipment || k.equip || [];
-
-  var h = '<div class="card lift"><div class="thumb t1">' + ICONS.culinaryKitchen + '</div><div class="row"><b class="kt">' + esc(k.name) + '</b>' +
-    B(st, st === 'verified' ? 'Verified License' : st === 'pending' ? 'Pending Review' : 'Rejected') + '</div>' +
-    '<div class="muted">' + ICONS.pin + ' ' + esc(k.address) + '</div>' +
-    '<div class="rate"><span class="price">' + fmt(k.hourly_rate) + '</span><span class="muted"> / hour</span></div>' +
-    '<div class="chips sm">' + equip.map(e => '<span class="chip">' + esc(e) + '</span>').join('') + '</div>' +
-    '<div class="muted" style="font-size:13px">Commercial Permit: ' + esc(k.license_info) + '</div>';
-
-  if (role() === 'admin') {
-    h += '<div class="admin-strip">' + ICONS.shield + ' <span><b>Admin</b> · verification: ' + st + '</span>' +
-      (st === 'verified' ? '<button class="bad" data-act="revoke" data-id="' + k.id + '">Revoke</button>' : '<button data-act="verify" data-id="' + k.id + '">Verify</button>') + '</div>';
+  var linksHtml = '';
+  if (r === 'guest') {
+    linksHtml = `
+      <a href="#events" class="${cur === 'events' ? 'on' : ''}">Supper Clubs</a>
+      <a href="#kitchens" class="${cur === 'kitchens' ? 'on' : ''}">Kitchen Spaces</a>
+      <a href="#login" class="${cur === 'login' ? 'on' : ''}">Sign In</a>
+    `;
+    userAction.innerHTML = `<button class="nav-cta" data-act="open-cook-host">Cook or Host</button>`;
+  } else if (r === 'attendee') {
+    linksHtml = `
+      <a href="#events" class="${cur === 'events' ? 'on' : ''}">Supper Clubs</a>
+      <a href="#tickets" class="${cur === 'tickets' ? 'on' : ''}">My Reservations</a>
+      <a href="#kitchens" class="${cur === 'kitchens' ? 'on' : ''}">Kitchen Spaces</a>
+    `;
+    userAction.innerHTML = `
+      <div class="user-menu">
+        <span class="role-chip">${esc(me().split(' ')[0])} · Diner</span>
+        <button class="logout-btn" data-act="logout">Sign out</button>
+      </div>
+    `;
+  } else if (r === 'chef') {
+    linksHtml = `
+      <a href="#kitchens" class="${cur === 'kitchens' ? 'on' : ''}">Kitchen Spaces</a>
+      <a href="#chef-bookings" class="${cur === 'chef' ? 'on' : ''}">My Bookings</a>
+      <a href="#events" class="${cur === 'events' ? 'on' : ''}">Explore Dinners</a>
+    `;
+    userAction.innerHTML = `
+      <div class="user-menu">
+        <button class="nav-cta" data-act="modal-event">+ Host a Pop-up</button>
+        <span class="role-chip">${esc(me().split(' ')[0])} · Chef</span>
+        <button class="logout-btn" data-act="logout">Sign out</button>
+      </div>
+    `;
+  } else if (r === 'host') {
+    linksHtml = `
+      <a href="#host-dashboard" class="${cur === 'host' ? 'on' : ''}">Kitchen Hub</a>
+      <a href="#kitchens" class="${cur === 'kitchens' ? 'on' : ''}">Browse Network</a>
+    `;
+    userAction.innerHTML = `
+      <div class="user-menu">
+        <button class="nav-cta" data-act="modal-kitchen">+ List Kitchen</button>
+        <span class="role-chip">${esc(me().split(' ')[0])} · Host</span>
+        <button class="logout-btn" data-act="logout">Sign out</button>
+      </div>
+    `;
+  } else if (r === 'admin') {
+    linksHtml = `
+      <a href="#admin-console" class="${cur === 'admin' ? 'on' : ''}">Verifications</a>
+      <a href="#kitchens" class="${cur === 'kitchens' ? 'on' : ''}">Kitchens</a>
+      <a href="#events" class="${cur === 'events' ? 'on' : ''}">Pop-ups</a>
+    `;
+    userAction.innerHTML = `
+      <div class="user-menu">
+        <span class="role-chip">Platform Admin</span>
+        <button class="logout-btn" data-act="logout">Sign out</button>
+      </div>
+    `;
   }
-  return h + '<div class="slots">' + (sl.length ? sl.map(s => slotRow(s, k)).join('') : '<div class="muted">No off-peak slots published yet.</div>') + '</div></div>';
-}
 
-function bCard(b, host){
-  var s = by(S.slots, b.slot_id) || { start_time: b.start_time, end_time: b.end_time };
-  var kName = b.kitchen_name || (by(S.kitchens, s.kitchen_id) || {}).name || 'Kitchen';
-  var num = b.booking_no ? '#' + b.booking_no : '#' + (b.id || '').slice(0, 6);
-  var chefLabel = b.chef_name || b.chef || 'Chef';
+  navLinks.innerHTML = linksHtml;
 
-  return '<div class="card"><div class="row"><b>Booking ' + num + '</b>' + B(b.status) + '</div>' +
-    '<div class="muted">' + (host ? ICONS.chef + ' ' + esc(chefLabel) + ' · ' : '') + esc(kName) + '</div>' +
-    '<div>' + ICONS.cal + ' ' + fmtSlot(s) + '</div>' +
-    (host && b.status === 'pending' ? '<div class="row act" style="margin-top:10px"><button data-act="approve" data-id="' + b.id + '">Approve Request</button><button class="bad" data-act="decline" data-id="' + b.id + '">Decline</button></div>' : '') +
-    '</div>';
-}
-
-var browse = '<a class="btn" href="#kitchens" data-go="kitchens">Browse kitchens</a>';
-
-// ── FILTERING & RENDERING ───────────────────────────────────────────────────
-function renderFilteredKitchens() {
-  var list = S.kitchens || [];
-  var q = (S.searchQuery || '').trim().toLowerCase();
-
-  var filtered = list.filter(function(k) {
-    if (S.district && S.district !== 'All') {
-      if (!k.address || k.address.toLowerCase().indexOf(S.district.toLowerCase()) === -1) {
-        return false;
-      }
-    }
-    if (S.filters && S.filters.length) {
-      var kEquip = (k.equipment || k.equip || []).map(function(e) { return e.toLowerCase(); });
-      var hasAll = S.filters.every(function(f) {
-        return kEquip.some(function(ke) { return ke.indexOf(f.toLowerCase()) > -1; });
-      });
-      if (!hasAll) return false;
-    }
-    if (q) {
-      var matchName = (k.name || '').toLowerCase().indexOf(q) > -1;
-      var matchAddr = (k.address || '').toLowerCase().indexOf(q) > -1;
-      var matchEquip = (k.equipment || k.equip || []).some(function(e) { return e.toLowerCase().indexOf(q) > -1; });
-      if (!matchName && !matchAddr && !matchEquip) return false;
-    }
-    return true;
+  // Update Reviewer drawer active button
+  $$('.demo-role-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.role === r);
   });
+}
 
-  var countEl = $1('#count');
-  if (countEl) {
-    countEl.textContent = 'Showing ' + filtered.length + ' of ' + list.length + ' verified commercial kitchens';
+function $$ (s) { return [].slice.call(document.querySelectorAll(s)); }
+
+// ── SKELETON LOADERS ────────────────────────────────────────────────────────
+function skeletonCards(n) {
+  var h = '';
+  for (var i = 0; i < (n || 3); i++) {
+    h += `
+      <div class="card skeleton-card">
+        <div class="skeleton skeleton-img"></div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line sm"></div>
+      </div>
+    `;
   }
+  return h;
+}
 
-  var listEl = $1('#kitchenList');
-  if (listEl) {
-    listEl.innerHTML = filtered.length ?
-      filtered.map(kCard).join('') :
-      empty('plate', 'No kitchens found', 'Try adjusting your search terms or clearing the district filter.', '<button class="ghost" data-act="clearfilter">Reset filters</button>');
+// ── MODAL SYSTEM ────────────────────────────────────────────────────────────
+function openModal(title, formHtml) {
+  var m = $1('#modalContainer');
+  m.innerHTML = `
+    <div class="modal-box" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3 class="modal-title">${esc(title)}</h3>
+        <button class="modal-close" data-act="modal-close" aria-label="Close dialog">✕</button>
+      </div>
+      <div>${formHtml}</div>
+    </div>
+  `;
+  m.hidden = false;
+  document.body.classList.add('locked');
+}
+
+function closeModal() {
+  var m = $1('#modalContainer');
+  if (m) {
+    m.hidden = true;
+    m.innerHTML = '';
+  }
+  document.body.classList.remove('locked');
+}
+
+// ── VIEW RENDERERS ──────────────────────────────────────────────────────────
+
+// 1. SUPPER CLUBS & POP-UP EVENTS VIEW (Default Public Landing)
+async function renderEventsView() {
+  var view = $1('#appView');
+  view.innerHTML = `
+    <div class="hero">
+      <h1>Cairo Pop-ups & Supper Clubs</h1>
+      <p>Exclusive tasting menus, guest chef residencies, and intimate supper clubs hosted inside licensed commercial kitchens across Cairo.</p>
+    </div>
+
+    <!-- Hospitality Credibility Signals -->
+    <div class="trust-bar">
+      <div class="trust-item">
+        <div class="trust-icon">${ICONS.shield}</div>
+        <div>
+          <div class="trust-title">MOH Licensed Kitchens</div>
+          <div class="trust-sub">Inspected commercial food preparation facilities</div>
+        </div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon">${ICONS.chef}</div>
+        <div>
+          <div class="trust-title">Curated Guest Chefs</div>
+          <div class="trust-sub">Artisanal concepts from Egypt's top culinary talent</div>
+        </div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon">${ICONS.ticket}</div>
+        <div>
+          <div class="trust-title">Intimate Seating</div>
+          <div class="trust-sub">Limited seating with secret locations revealed upon booking</div>
+        </div>
+      </div>
+    </div>
+
+    <h2>Upcoming Pop-up Dinners</h2>
+    <div id="eventGrid">${skeletonCards(2)}</div>
+  `;
+
+  try {
+    var data = await api('GET', '/events');
+    var events = data.events || [];
+    var grid = $1('#eventGrid');
+    if (!grid) return;
+
+    if (!events.length) {
+      grid.innerHTML = `
+        <div class="card empty" style="text-align:center;padding:40px 20px">
+          <div style="font-size:36px;margin-bottom:12px">🍽️</div>
+          <h2>No Upcoming Pop-ups Published Yet</h2>
+          <p class="muted" style="max-width:440px;margin:0 auto 16px">Guest chefs post pop-up supper clubs once their commercial kitchen slots are approved.</p>
+          ${role() === 'chef' ? '<button class="nav-cta" data-act="modal-event">+ Host a Pop-up Dinner</button>' : '<a class="btn" href="#kitchens">Browse Commercial Kitchens</a>'}
+        </div>
+      `;
+      return;
+    }
+
+    grid.innerHTML = events.map(ev => {
+      var left = ev.seats_left != null ? ev.seats_left : ev.capacity;
+      var total = ev.capacity || 20;
+      var pct = Math.max(0, Math.min(100, Math.round(((total - left) / total) * 100)));
+      var photo = hashPhoto(ev.title || ev.id, EVENT_PHOTOS);
+      var dateStr = ev.starts_at ? new Date(ev.starts_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Upcoming Date';
+      var f = flash && flash.id === ev.id;
+
+      return `
+        <div class="card lift">
+          <div class="card-media">
+            <img class="card-img" src="${photo}" alt="${esc(ev.title)}" loading="lazy">
+            <div class="card-badge-top">${left > 5 ? left + ' seats left' : left > 0 ? 'Only ' + left + ' left' : 'Sold out'}</div>
+            <div class="card-badge-bottom">${ICONS.pin} Secret Location · ${esc((ev.address || '').split(',')[1] || 'Cairo')}</div>
+          </div>
+          
+          <div class="row">
+            <b class="kt" style="font-size:20px">${esc(ev.title)}</b>
+            <div class="price" style="font-size:20px">${fmt(ev.ticket_price)} <span class="muted" style="font-size:13px">/ seat</span></div>
+          </div>
+
+          <div class="muted" style="margin:6px 0 10px">${ICONS.chef} Hosted by Chef ${esc(ev.chef_name)} · ${ICONS.cal} ${dateStr}</div>
+
+          <div class="seat-progress-bar" title="${total - left} of ${total} seats booked">
+            <div class="seat-progress-fill" style="width:${100 - pct}%"></div>
+          </div>
+
+          <p class="menu" style="margin:8px 0 14px;color:var(--text);font-size:14.5px">${esc(ev.menu_description)}</p>
+
+          <form novalidate data-form="reserve" data-id="${ev.id}" data-price="${ev.ticket_price}" data-left="${left}">
+            <input type="hidden" name="event_id" value="${ev.id}">
+            <div class="row" style="align-items:flex-end;margin-bottom:12px">
+              <div style="flex:1">
+                <label style="font-size:12.5px;font-weight:700">Reserve Seats ${role() !== 'guest' ? '<span class="muted">(as ' + esc(me().split(' ')[0]) + ')</span>' : ''}</label>
+                <input name="quantity" type="number" inputmode="numeric" min="1" max="${left}" placeholder="Seats (e.g. 2)" ${left ? '' : 'disabled'} style="margin:0">
+              </div>
+              <div style="text-align:right;padding-bottom:10px">
+                <span class="muted" style="font-size:12px">Total:</span> <b class="price total">0 EGP</b>
+              </div>
+            </div>
+            <div class="msg err" role="alert" hidden></div>
+            ${f ? '<div class="msg ok" role="status"><b>Reservation Confirmed!</b> ' + flash.text + ' <a href="#tickets">View My Tickets</a></div>' : ''}
+            <button type="submit" style="width:100%" ${left ? '' : 'disabled'}>${left ? 'Reserve Pop-up Seats' : 'Sold Out'}</button>
+          </form>
+        </div>
+      `;
+    }).join('');
+
+  } catch(err) {
+    var g = $1('#eventGrid');
+    if (g) g.innerHTML = '<div class="card empty"><p>Unable to load supper clubs at this moment.</p></div>';
   }
 }
 
-function updateChipsUi() {
-  var chipsEl = $1('#chips');
-  if (!chipsEl) return;
+// 2. COMMERCIAL KITCHENS VIEW
+async function renderKitchensView() {
+  var view = $1('#appView');
+  view.innerHTML = `
+    <div class="dashboard-header">
+      <div class="dashboard-title-area">
+        <h1>Commercial Kitchen Spaces</h1>
+        <p class="sub">Verified licensed commercial kitchens with off-peak shift availability across Cairo.</p>
+      </div>
+      ${role() === 'host' ? '<button class="btn-primary-action" data-act="modal-kitchen">+ List a Kitchen</button>' : ''}
+    </div>
 
-  var distHtml = '<div class="district-chips">' + DISTRICTS.map(d =>
-    '<button type="button" class="district-chip' + (S.district === d ? ' on' : '') + '" data-act="district" data-district="' + d + '">' + d + '</button>'
-  ).join('') + '</div>';
+    <!-- Search Box -->
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" class="search-ico"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="search" id="kSearch" placeholder="Search by kitchen name, Dokki, Zamalek, Maadi, New Cairo..." autocomplete="off">
+    </div>
 
-  var equipHtml = '<div class="chips" style="margin-top:8px">' + EQUIP.map(t =>
-    '<button type="button" class="chip' + (S.filters.indexOf(t) > -1 ? ' on' : '') + '" data-act="filter" data-tag="' + t + '">' + t + '</button>'
-  ).join('') + (S.filters.length || S.district !== 'All' || S.searchQuery ? '<button type="button" class="chip clear" data-act="clearfilter">Clear all</button>' : '') + '</div>';
+    <!-- Filter Chips -->
+    <div class="filter-row">
+      <div id="chips" class="chips"></div>
+    </div>
 
-  chipsEl.innerHTML = distHtml + equipHtml;
-}
+    <p class="muted" id="count" style="font-size:13.5px;font-weight:600;margin:12px 0"></p>
+    <div id="kitchenList">${skeletonCards(3)}</div>
+  `;
 
-// ── PAGE RENDERERS ──────────────────────────────────────────────────────────
-R.login = async () => {
-  $1('#session').innerHTML = S.session ?
-    '<div class="card row"><div><div class="muted">Signed in as</div><b>' + esc(me()) + '</b> ' + B('approved', role()) + '</div><button class="ghost" data-act="logout">Log out</button></div>' : '';
-};
-
-R.kitchens = async () => {
-  $1('#sysStats').innerHTML = role() === 'admin' ? banner() : '';
-  updateChipsUi();
-
-  var sInput = $1('#kSearch');
-  if (sInput && sInput.value !== S.searchQuery) {
-    sInput.value = S.searchQuery || '';
-  }
+  updateKitchenChips();
 
   try {
     var data = await api('GET', '/kitchens');
@@ -310,38 +428,240 @@ R.kitchens = async () => {
     S.slots = allSlots;
 
     renderFilteredKitchens();
-  } catch (err) {
-    $1('#kitchenList').innerHTML = empty('plate', 'Unable to load kitchens', err.message, '');
+  } catch(err) {
+    var kl = $1('#kitchenList');
+    if (kl) kl.innerHTML = '<div class="card empty"><p>Unable to load kitchens.</p></div>';
   }
-};
+}
 
-R.host = async () => {
-  $1('#hostSub').textContent = 'Signed in as ' + me() + '. Manage kitchens, slots and booking requests.';
-  try {
-    var [bData, kData] = await Promise.all([
-      api('GET', '/bookings').catch(() => ({ bookings: [] })),
-      api('GET', '/kitchens').catch(() => ({ kitchens: [] }))
-    ]);
-    S.bookings = bData.bookings || [];
-    S.kitchens = kData.kitchens || [];
+function updateKitchenChips() {
+  var c = $1('#chips');
+  if (!c) return;
 
-    var pCount = S.bookings.filter(b => b.status === 'pending').length;
-    var aCount = S.bookings.filter(b => b.status === 'approved').length;
-    $1('#hostStats').innerHTML = tiles([[pCount, 'Pending'], [aCount, 'Approved'], [S.kitchens.length, 'Kitchens']]);
+  var distHtml = '<div class="district-chips">' + DISTRICTS.map(d =>
+    '<button type="button" class="district-chip' + (S.district === d ? ' on' : '') + '" data-act="district" data-district="' + d + '">' + d + '</button>'
+  ).join('') + '</div>';
 
-    var l = S.bookings;
-    $1('#hostBookings').innerHTML = l.length ? l.map(b => bCard(b, 1)).join('') : empty('plate', 'No booking requests yet', 'Requests from guest chefs will appear here.', '');
+  var equipHtml = '<div class="chips" style="margin-top:8px">' + EQUIP.map(t =>
+    '<button type="button" class="chip' + (S.filters.indexOf(t) > -1 ? ' on' : '') + '" data-act="filter" data-tag="' + t + '">' + t + '</button>'
+  ).join('') + (S.filters.length || S.district !== 'All' || S.searchQuery ? '<button type="button" class="chip clear" data-act="clearfilter">Clear all</button>' : '') + '</div>';
 
-    var sel = $1('#slotKitchen');
-    if (sel) {
-      sel.innerHTML = S.kitchens.map(k => '<option value="' + k.id + '">' + esc(k.name) + '</option>').join('');
+  c.innerHTML = distHtml + equipHtml;
+}
+
+function renderFilteredKitchens() {
+  var list = S.kitchens || [];
+  var q = (S.searchQuery || '').trim().toLowerCase();
+
+  var filtered = list.filter(function(k) {
+    if (S.district && S.district !== 'All') {
+      if (!k.address || k.address.toLowerCase().indexOf(S.district.toLowerCase()) === -1) {
+        return false;
+      }
     }
-  } catch (err) {
-    toast(err.message);
-  }
-};
+    if (S.filters && S.filters.length) {
+      var kEquip = (k.equipment || k.equip || []).map(e => e.toLowerCase());
+      var hasAll = S.filters.every(f => kEquip.some(ke => ke.indexOf(f.toLowerCase()) > -1));
+      if (!hasAll) return false;
+    }
+    if (q) {
+      var matchName = (k.name || '').toLowerCase().indexOf(q) > -1;
+      var matchAddr = (k.address || '').toLowerCase().indexOf(q) > -1;
+      var matchEquip = (k.equipment || k.equip || []).some(e => e.toLowerCase().indexOf(q) > -1);
+      if (!matchName && !matchAddr && !matchEquip) return false;
+    }
+    return true;
+  });
 
-R.chef = async () => {
+  var countEl = $1('#count');
+  if (countEl) countEl.textContent = 'Showing ' + filtered.length + ' of ' + list.length + ' verified commercial kitchens';
+
+  var kl = $1('#kitchenList');
+  if (!kl) return;
+
+  if (!filtered.length) {
+    kl.innerHTML = `
+      <div class="card empty" style="text-align:center;padding:40px 20px">
+        <h2>No Commercial Kitchens Match Your Search</h2>
+        <p class="muted">Try adjusting your filters or search terms.</p>
+        <button class="ghost" data-act="clearfilter" style="margin-top:12px">Reset Filters</button>
+      </div>
+    `;
+    return;
+  }
+
+  kl.innerHTML = filtered.map(k => {
+    var sl = S.slots.filter(s => s.kitchen_id === k.id);
+    var st = k.verification_status || k.status || 'pending';
+    var equip = k.equipment || k.equip || [];
+    var photo = hashPhoto(k.name || k.id, KITCHEN_PHOTOS);
+
+    return `
+      <div class="card lift">
+        <div class="card-media">
+          <img class="card-img" src="${photo}" alt="${esc(k.name)}" loading="lazy">
+          <div class="card-badge-top">${st === 'verified' ? '✓ MOH Verified' : 'Pending Review'}</div>
+          <div class="card-badge-bottom">${ICONS.pin} ${esc(k.address)}</div>
+        </div>
+
+        <div class="row">
+          <b class="kt" style="font-size:20px">${esc(k.name)}</b>
+          <div class="price" style="font-size:20px">${fmt(k.hourly_rate)} <span class="muted" style="font-size:13px">/ hr</span></div>
+        </div>
+
+        <div class="muted" style="font-size:13px;margin:4px 0 10px">License Permit: ${esc(k.license_info)}</div>
+        
+        <div class="chips sm" style="margin-bottom:14px">
+          ${equip.map(e => '<span class="chip">' + esc(e) + '</span>').join('')}
+        </div>
+
+        <div class="slots">
+          <b style="font-size:13px;color:var(--text);display:block;margin-bottom:6px">Available Shift Slots</b>
+          ${sl.length ? sl.map(s => slotRow(s, k)).join('') : '<div class="muted" style="font-size:13px">No shift slots published yet.</div>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function slotRow(s, k) {
+  var mine = S.bookings.filter(b => b.slot_id === s.id && (b.chef_id === S.session?.id || b.chef === me()))[0];
+  var hrs = slotHours(s);
+  var rate = k.hourly_rate || 250;
+  var cost = hrs * rate;
+  var actionHtml = '';
+
+  if (s.status === 'booked') {
+    actionHtml = B('booked', 'Booked');
+  } else if (k.verification_status !== 'verified' && k.status !== 'verified') {
+    actionHtml = '<span class="muted" style="font-size:12px">Pending verification</span>';
+  } else if (mine) {
+    actionHtml = B(mine.status, 'Request ' + mine.status);
+  } else if (role() === 'chef') {
+    actionHtml = `<button data-act="request" data-id="${s.id}" style="padding:6px 14px;font-size:13px">Request Shift</button>`;
+  } else if (role() === 'guest') {
+    actionHtml = `<a class="btn ghost" href="#login" style="padding:6px 12px;font-size:12px">Chef Sign-in to Request</a>`;
+  } else {
+    actionHtml = '<span class="muted" style="font-size:12px">Chef access required</span>';
+  }
+
+  return `
+    <div class="slot">
+      <div>
+        <div style="font-weight:600">${ICONS.cal} ${fmtSlot(s)}</div>
+        <div class="muted" style="font-size:12px">${hrs} hrs × ${fmt(rate)} = <b>${fmt(cost)}</b></div>
+      </div>
+      ${actionHtml}
+    </div>
+  `;
+}
+
+// 3. DINER TICKETS & RESERVATIONS VIEW
+async function renderTicketsView() {
+  if (role() === 'guest') {
+    location.replace('#login');
+    return;
+  }
+
+  var view = $1('#appView');
+  view.innerHTML = `
+    <div class="hero">
+      <h1>My Pop-up Reservations</h1>
+      <p>Your confirmed supper club admissions and admission ticket stubs.</p>
+    </div>
+    <div id="ticketFeed">${skeletonCards(2)}</div>
+  `;
+
+  try {
+    var data = await api('GET', '/tickets');
+    var tickets = data.tickets || [];
+    var feed = $1('#ticketFeed');
+    if (!feed) return;
+
+    if (!tickets.length) {
+      feed.innerHTML = `
+        <div class="card empty" style="text-align:center;padding:48px 20px">
+          <div style="font-size:36px;margin-bottom:12px">🎟️</div>
+          <h2>No Upcoming Reservations Yet</h2>
+          <p class="muted" style="max-width:400px;margin:0 auto 16px">Browse Cairo's exclusive guest chef supper clubs to reserve your seat at the table.</p>
+          <a class="nav-cta" href="#events" style="display:inline-block">Explore Cairo Supper Clubs</a>
+        </div>
+      `;
+      return;
+    }
+
+    feed.innerHTML = tickets.map(t => {
+      var dateStr = t.starts_at ? new Date(t.starts_at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Confirmed date';
+      return `
+        <div class="card ticket-card">
+          <div class="row" style="margin-bottom:6px">
+            <div>
+              <span class="ticket-badge">DINING ADMISSION PASS</span>
+              <h3 style="margin:4px 0 0;font-size:19px;font-weight:800">${esc(t.event_title)}</h3>
+            </div>
+            ${B('approved', 'Confirmed')}
+          </div>
+          <div class="ticket-divider"></div>
+          <div class="ticket-body">
+            <div class="ticket-info">
+              <span>Date & Time</span>
+              <b>${ICONS.cal} ${dateStr}</b>
+            </div>
+            <div class="ticket-info">
+              <span>Venue & Chef</span>
+              <b>${ICONS.pin} ${esc(t.kitchen_name)}</b>
+              <div class="muted" style="font-size:12.5px;margin-top:2px">${ICONS.chef} Chef ${esc(t.chef_name)}</div>
+            </div>
+            <div class="ticket-info">
+              <span>Reserved Seats</span>
+              <b>${t.quantity} seat${t.quantity > 1 ? 's' : ''} (${fmt(t.unit_price)}/seat)</b>
+            </div>
+            <div class="ticket-info">
+              <span>Total Paid</span>
+              <b class="price" style="font-size:18px">${fmt(t.total_price)}</b>
+            </div>
+          </div>
+          <div class="ticket-footer">
+            <span class="ticket-ref">PASS #T-${t.ref_no}</span>
+            <button type="button" class="ghost" onclick="window.print()" style="font-size:12px;padding:5px 14px">Print / Save Pass</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch(err) {
+    var f = $1('#ticketFeed');
+    if (f) f.innerHTML = '<div class="card empty"><p>Unable to load reservations.</p></div>';
+  }
+}
+
+// 4. CHEF DASHBOARD VIEW
+async function renderChefView() {
+  if (role() !== 'chef') {
+    toast('Chef account required to access Chef Hub.');
+    location.replace('#login');
+    return;
+  }
+
+  var view = $1('#appView');
+  view.innerHTML = `
+    <div class="dashboard-header">
+      <div class="dashboard-title-area">
+        <h1>Chef Culinary Hub</h1>
+        <p class="sub">Manage kitchen slot requests, booking approvals, and published supper clubs.</p>
+      </div>
+      <button class="btn-primary-action" data-act="modal-event">+ Host a Pop-up</button>
+    </div>
+
+    <div id="chefStats"></div>
+
+    <h2>My Kitchen Slot Bookings</h2>
+    <div id="chefBookingsFeed">${skeletonCards(2)}</div>
+
+    <h2>My Published Pop-up Dinners</h2>
+    <div id="chefEventsFeed">${skeletonCards(1)}</div>
+  `;
+
   try {
     var [bData, evData] = await Promise.all([
       api('GET', '/bookings').catch(() => ({ bookings: [] })),
@@ -352,197 +672,294 @@ R.chef = async () => {
 
     var pCount = S.bookings.filter(b => b.status === 'pending').length;
     var aCount = S.bookings.filter(b => b.status === 'approved').length;
-    var dCount = S.bookings.filter(b => b.status === 'declined').length;
-    $1('#chefStats').innerHTML = tiles([[pCount, 'Pending'], [aCount, 'Approved'], [dCount, 'Declined']]);
+    $1('#chefStats').innerHTML = `
+      <div class="stats">
+        <div class="stat"><b>${pCount}</b><span>Pending Requests</span></div>
+        <div class="stat"><b>${aCount}</b><span>Approved Kitchens</span></div>
+        <div class="stat"><b>${S.events.length}</b><span>Active Dinners</span></div>
+      </div>
+    `;
 
-    $1('#chefBookings').innerHTML = S.bookings.length ?
-      S.bookings.map(b => bCard(b, 0)).join('') :
-      empty('plate', 'No active bookings yet', 'Find a verified kitchen and request an off-peak slot.', browse);
-
-    var el = S.bookings.filter(b => b.status !== 'declined' && !S.events.some(e => e.booking_id === b.id));
-    var sel = $1('#evBooking');
-    if (sel) {
-      sel.innerHTML = el.map(b => '<option value="' + b.id + '">#' + (b.booking_no || b.id.slice(0, 6)) + ' · ' + esc(b.kitchen_name || 'Kitchen') + ' · ' + b.status + '</option>').join('');
-      $1('#evFields').disabled = !el.length;
-      $1('#evNote').hidden = !!el.length;
+    var bf = $1('#chefBookingsFeed');
+    if (!S.bookings.length) {
+      bf.innerHTML = `
+        <div class="card empty" style="text-align:center;padding:32px 20px">
+          <p class="muted">You have no active kitchen booking requests.</p>
+          <a class="btn" href="#kitchens" style="margin-top:10px">Find a Commercial Kitchen</a>
+        </div>
+      `;
+    } else {
+      bf.innerHTML = S.bookings.map(b => bCard(b, false)).join('');
     }
 
-    $1('#chefEvents').innerHTML = S.events.length ?
-      S.events.map(ev => '<div class="card"><div class="row"><b>' + esc(ev.title) + '</b>' + (ev.booking_status === 'approved' ? B('approved', 'Live') : B('pending', 'Awaiting host approval')) + '</div><div class="muted">' + esc(ev.kitchen_name) + '</div><div class="row" style="margin-top:8px"><span>' + fmt(ev.ticket_price) + ' per seat</span><span class="muted">' + (ev.seats_sold || 0) + ' of ' + ev.capacity + ' seats sold</span></div></div>').join('') :
-      empty('plate', 'No events yet', 'Publish your first pop-up below once you have a kitchen booking.', '');
-  } catch (err) {
+    var ef = $1('#chefEventsFeed');
+    if (!S.events.length) {
+      ef.innerHTML = `
+        <div class="card empty" style="text-align:center;padding:32px 20px">
+          <p class="muted">No pop-up events published yet.</p>
+          <button class="nav-cta" data-act="modal-event" style="margin-top:10px">+ Host Your First Pop-up</button>
+        </div>
+      `;
+    } else {
+      ef.innerHTML = S.events.map(ev => `
+        <div class="card">
+          <div class="row">
+            <b class="kt" style="font-size:18px">${esc(ev.title)}</b>
+            ${ev.booking_status === 'approved' ? B('approved', 'Live on Marketplace') : B('pending', 'Awaiting Kitchen Host Approval')}
+          </div>
+          <div class="muted" style="margin:4px 0 8px">${ICONS.pin} ${esc(ev.kitchen_name)}</div>
+          <div class="row">
+            <span>Ticket Price: <b>${fmt(ev.ticket_price)}</b></span>
+            <span class="muted">${ev.seats_sold || 0} of ${ev.capacity} seats sold</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+  } catch(err) {
     toast(err.message);
   }
-};
-
-function eCard(ev){
-  var left = ev.seats_left != null ? ev.seats_left : ev.capacity;
-  var total = ev.capacity || 20;
-  var pct = Math.max(0, Math.min(100, Math.round(((total - left) / total) * 100)));
-  var f = flash && flash.id === ev.id;
-  var dateStr = ev.starts_at ? new Date(ev.starts_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'Upcoming Date';
-
-  return '<div class="card lift"><div class="thumb t2">' + ICONS.culinaryEvent + '</div>' +
-    '<div class="row"><b class="kt">' + esc(ev.title) + '</b>' +
-    (left > 5 ? B('approved', left + ' of ' + total + ' seats left') : left > 0 ? B('pending', 'Only ' + left + ' left') : B('declined', 'Sold out')) + '</div>' +
-    '<div class="muted">' + ICONS.chef + ' By Chef ' + esc(ev.chef_name) + ' · ' + esc(ev.kitchen_name) + '</div>' +
-    '<div class="muted">' + ICONS.cal + ' ' + dateStr + ' · ' + ICONS.pin + ' ' + esc(ev.address) + '</div>' +
-    '<div class="seat-progress-bar" title="' + (total - left) + ' of ' + total + ' seats booked"><div class="seat-progress-fill" style="width:' + (100 - pct) + '%"></div></div>' +
-    '<p class="menu">' + esc(ev.menu_description) + '</p>' +
-    '<div class="price big">' + fmt(ev.ticket_price) + ' <span class="muted">per seat</span></div>' +
-    '<form novalidate data-form="reserve" data-id="' + ev.id + '" data-price="' + ev.ticket_price + '" data-left="' + left + '">' +
-    '<input type="hidden" name="event_id" value="' + ev.id + '">' +
-    '<label>Number of Seats <span class="muted">(reserving as ' + esc(me()) + ')</span></label>' +
-    '<input name="quantity" type="number" inputmode="numeric" min="1" max="' + left + '" placeholder="e.g. 2"' + (left ? '' : ' disabled') + '>' +
-    '<div class="row" style="margin-top:12px"><span class="muted">Total Cost</span><b class="price total">0 EGP</b></div>' +
-    '<div class="msg err" role="alert" hidden></div>' +
-    (f ? '<div class="msg ok" role="status"><b>Reservation confirmed!</b> ' + flash.text + ' <a href="#tickets" data-go="tickets">View My Tickets</a></div>' : '') +
-    '<button type="submit"' + (left ? '' : ' disabled') + '>' + (left ? 'Reserve seats' : 'Sold out') + '</button>' +
-    '</form></div>';
 }
 
-R.event = async () => {
-  try {
-    var data = await api('GET', '/events');
-    var live = data.events || [];
-    $1('#eventList').innerHTML = live.length ?
-      live.map(eCard).join('') :
-      empty('plate', 'No pop-ups published yet', 'Chefs publish an event once a kitchen booking is approved.', '');
-    flash = null;
-  } catch (err) {
-    $1('#eventList').innerHTML = empty('plate', 'Could not load events', err.message, '');
+// 5. HOST DASHBOARD VIEW
+async function renderHostView() {
+  if (role() !== 'host') {
+    toast('Kitchen Host account required.');
+    location.replace('#login');
+    return;
   }
-};
 
-R.tickets = async () => {
+  var view = $1('#appView');
+  view.innerHTML = `
+    <div class="dashboard-header">
+      <div class="dashboard-title-area">
+        <h1>Kitchen Host Hub</h1>
+        <p class="sub">Signed in as <b>${esc(me())}</b>. Manage commercial listings, shift slots, and chef requests.</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-primary-action" data-act="modal-kitchen">+ List Kitchen</button>
+        <button class="btn-primary-action ghost" data-act="modal-slot">+ Add Shift Slot</button>
+      </div>
+    </div>
+
+    <div id="hostStats"></div>
+
+    <h2>Incoming Booking Requests</h2>
+    <div id="hostRequestsFeed">${skeletonCards(2)}</div>
+
+    <h2>My Listed Kitchens</h2>
+    <div id="hostKitchensFeed">${skeletonCards(1)}</div>
+  `;
+
   try {
-    var data = await api('GET', '/tickets');
-    var list = data.tickets || [];
-    $1('#ticketList').innerHTML = list.length ?
-      list.map(t => {
-        var dateStr = t.starts_at ? new Date(t.starts_at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Confirmed date';
-        return '<div class="card ticket-card">' +
-          '<div class="row" style="margin-bottom:6px">' +
-            '<div><span class="ticket-badge">DINING ADMISSION PASS</span><h3 style="margin:4px 0 0;font-size:18.5px;font-weight:800">' + esc(t.event_title) + '</h3></div>' +
-            B('approved', 'Confirmed') +
-          '</div>' +
-          '<div class="ticket-divider"></div>' +
-          '<div class="ticket-body">' +
-            '<div class="ticket-info"><span>Date & Time</span><b>' + ICONS.cal + ' ' + dateStr + '</b></div>' +
-            '<div class="ticket-info"><span>Venue & Chef</span><b>' + ICONS.pin + ' ' + esc(t.kitchen_name) + '</b><div class="muted" style="font-size:12.5px;margin-top:2px">' + ICONS.chef + ' By Chef ' + esc(t.chef_name) + '</div></div>' +
-            '<div class="ticket-info"><span>Seats Reserved</span><b>' + t.quantity + ' seat' + (t.quantity > 1 ? 's' : '') + ' (' + fmt(t.unit_price) + '/seat)</b></div>' +
-            '<div class="ticket-info"><span>Total Amount</span><b class="price" style="font-size:18px">' + fmt(t.total_price) + '</b></div>' +
-          '</div>' +
-          '<div class="ticket-footer">' +
-            '<span class="ticket-ref">PASS #T-' + t.ref_no + '</span>' +
-            '<button type="button" class="ghost" onclick="window.print()" style="font-size:12px;padding:5px 12px">Print / Save Pass</button>' +
-          '</div>' +
-        '</div>';
-      }).join('') :
-      empty('ticket', 'No tickets yet', 'Reserve seats at a pop-up dinner and your tickets will show up here.', '<a class="btn" href="#event" data-go="event">Browse events</a>');
-  } catch (err) {
-    $1('#ticketList').innerHTML = empty('ticket', 'Unable to load tickets', err.message, '<a class="btn" href="#login">Sign in</a>');
-  }
-};
+    var [bData, kData] = await Promise.all([
+      api('GET', '/bookings').catch(() => ({ bookings: [] })),
+      api('GET', '/kitchens').catch(() => ({ kitchens: [] }))
+    ]);
+    S.bookings = bData.bookings || [];
+    S.kitchens = kData.kitchens || [];
 
-R.admin = async () => {
+    var pCount = S.bookings.filter(b => b.status === 'pending').length;
+    var aCount = S.bookings.filter(b => b.status === 'approved').length;
+
+    $1('#hostStats').innerHTML = `
+      <div class="stats">
+        <div class="stat"><b>${pCount}</b><span>Pending Requests</span></div>
+        <div class="stat"><b>${aCount}</b><span>Approved Shifts</span></div>
+        <div class="stat"><b>${S.kitchens.length}</b><span>Kitchens Listed</span></div>
+      </div>
+    `;
+
+    var rf = $1('#hostRequestsFeed');
+    if (!S.bookings.length) {
+      rf.innerHTML = '<div class="card empty"><p class="muted">No booking requests from chefs yet.</p></div>';
+    } else {
+      rf.innerHTML = S.bookings.map(b => bCard(b, true)).join('');
+    }
+
+    var kf = $1('#hostKitchensFeed');
+    if (!S.kitchens.length) {
+      kf.innerHTML = `
+        <div class="card empty" style="text-align:center;padding:32px 20px">
+          <p class="muted">You have not listed any commercial kitchens yet.</p>
+          <button class="nav-cta" data-act="modal-kitchen" style="margin-top:10px">+ List Your Kitchen</button>
+        </div>
+      `;
+    } else {
+      kf.innerHTML = S.kitchens.map(k => `
+        <div class="card">
+          <div class="row">
+            <b class="kt" style="font-size:18px">${esc(k.name)}</b>
+            ${B(k.verification_status, k.verification_status === 'verified' ? 'Verified License' : 'Pending Review')}
+          </div>
+          <div class="muted" style="margin:4px 0">${ICONS.pin} ${esc(k.address)}</div>
+          <div class="muted">Rate: <b>${fmt(k.hourly_rate)} / hr</b> · License: ${esc(k.license_info)}</div>
+        </div>
+      `).join('');
+    }
+
+  } catch(err) {
+    toast(err.message);
+  }
+}
+
+// 6. ADMIN CONSOLE VIEW (RBAC Guarded!)
+async function renderAdminView() {
+  if (role() !== 'admin') {
+    toast('Access denied. Administrator privileges required.');
+    location.replace('#events');
+    return;
+  }
+
+  var view = $1('#appView');
+  view.innerHTML = `
+    <div class="dashboard-header">
+      <div class="dashboard-title-area">
+        <h1>Platform Administration Console</h1>
+        <p class="sub">License verifications, compliance audits, and platform metrics.</p>
+      </div>
+    </div>
+
+    <div id="adminStatsFeed">${skeletonCards(1)}</div>
+
+    <h2>Commercial Licenses Awaiting Verification</h2>
+    <div id="adminPendingFeed">${skeletonCards(2)}</div>
+  `;
+
   try {
     var [sData, kData] = await Promise.all([
       api('GET', '/admin/stats'),
       api('GET', '/admin/kitchens?status=pending')
     ]);
-    S.stats = sData.stats;
-    $1('#adminStats').innerHTML = banner();
+    var st = sData.stats || {};
+    $1('#adminStatsFeed').innerHTML = `
+      <div class="banner">
+        <div class="bn-h">${ICONS.shield} Platform Health Overview <span class="badge">Live Production</span></div>
+        <div class="bn-g">
+          <div><b>${st.kitchens_verified || 0}</b><span>Verified Kitchens</span></div>
+          <div><b>${st.kitchens_pending || 0}</b><span>Pending Review</span></div>
+          <div><b>${st.total_bookings || 0}</b><span>Kitchen Bookings</span></div>
+          <div><b>${st.seats_sold || 0}</b><span>Tickets Sold</span></div>
+        </div>
+        <div class="bn-f">Total Marketplace Ticket Revenue: <b>${fmt(st.revenue_egp)}</b></div>
+      </div>
+    `;
 
-    var p = kData.kitchens || [];
-    $1('#adminPending').innerHTML = p.length ?
-      p.map(k => '<div class="card"><div class="row"><b>' + esc(k.name) + '</b>' + B('pending', 'Pending review') + '</div>' +
-        '<div class="muted">' + ICONS.pin + ' ' + esc(k.address) + '</div>' +
-        '<div class="muted">License: ' + esc(k.license_info) + ' · ' + fmt(k.hourly_rate) + ' / hour</div>' +
-        '<div class="row act" style="margin-top:10px"><button data-act="verify" data-id="' + k.id + '">Approve license</button><button class="bad" data-act="reject" data-id="' + k.id + '">Reject</button></div></div>').join('') :
-      empty('shield', 'All caught up', 'No kitchen licenses are waiting for review.', '');
-  } catch (err) {
+    var pending = kData.kitchens || [];
+    var pf = $1('#adminPendingFeed');
+    if (!pending.length) {
+      pf.innerHTML = '<div class="card empty"><p class="muted">All commercial kitchen licenses are verified and up to date.</p></div>';
+    } else {
+      pf.innerHTML = pending.map(k => `
+        <div class="card">
+          <div class="row">
+            <b class="kt" style="font-size:18px">${esc(k.name)}</b>
+            ${B('pending', 'Pending Approval')}
+          </div>
+          <div class="muted" style="margin:4px 0">${ICONS.pin} ${esc(k.address)}</div>
+          <div class="muted">License info: <b>${esc(k.license_info)}</b> · Rate: ${fmt(k.hourly_rate)} / hr</div>
+          <div class="row act" style="margin-top:12px">
+            <button data-act="verify" data-id="${k.id}">Approve License</button>
+            <button class="bad" data-act="reject" data-id="${k.id}">Reject</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+  } catch(err) {
     toast(err.message);
   }
-};
-
-// ── AUTH GATE & DIALOG ──────────────────────────────────────────────────────
-function gate(show){
-  var g = $1('#gate');
-  if(!g){
-    if(!show) return;
-    g = document.createElement('div');
-    g.id = 'gate';
-    g.innerHTML = `<div class="gate-card" role="dialog" aria-modal="true" aria-labelledby="gt">
-      <div class="brand" style="margin-bottom:12px">${ICONS.logo} <span>GhostKitchen</span></div>
-      <h1 id="gt" style="margin:0 0 6px">Welcome</h1>
-      <p class="sub" style="margin-bottom:20px">Rent idle kitchens. Host unforgettable dinners across Cairo.</p>
-      
-      <div id="gChoice">
-        <button data-act="gate-signin" style="width:100%">Sign in / Register</button>
-        <button class="ghost" data-act="gate-guest" style="width:100%;margin-top:10px">Continue as guest</button>
-      </div>
-
-      <form id="gForm" hidden novalidate data-form="login">
-        <label>Full Name</label>
-        <input name="name" placeholder="Your full name" value="Nour Hassan">
-        <label>Email Address</label>
-        <input name="email" type="email" placeholder="you@example.com" value="nour@example.com">
-        <label>Password</label>
-        <input name="password_hash" type="password" placeholder="Choose a password" value="password123">
-        <label>Select Role</label>
-        <div class="seg">
-          <label><input type="radio" name="role" value="host"><span>Host</span></label>
-          <label><input type="radio" name="role" value="chef" checked><span>Chef</span></label>
-          <label><input type="radio" name="role" value="attendee"><span>Attendee</span></label>
-          <label><input type="radio" name="role" value="admin"><span>Admin</span></label>
-        </div>
-        <div class="msg err" role="alert" hidden></div>
-        <button type="submit">Sign in</button>
-        <button type="button" class="ghost" data-act="gate-back" style="width:100%;margin-top:10px">Back</button>
-      </form>
-
-      <p class="muted" style="margin:20px 0 10px;font-weight:600;font-size:13px">Or explore with a demo role</p>
-      <div class="demo">
-        <button class="ghost demo-btn" data-act="demo" data-role="host">${ICONS.host} <span>Host Manager</span></button>
-        <button class="ghost demo-btn" data-act="demo" data-role="chef">${ICONS.chef} <span>Guest Chef</span></button>
-        <button class="ghost demo-btn" data-act="demo" data-role="attendee">${ICONS.ticket} <span>Attendee</span></button>
-        <button class="ghost demo-btn" data-act="demo" data-role="admin">${ICONS.shield} <span>Platform Admin</span></button>
-      </div>
-    </div>`;
-    document.body.appendChild(g);
-  }
-  g.hidden = !show;
-  g.style.display = show ? 'flex' : 'none';
-  document.body.classList.toggle('locked', show);
 }
 
-function route(){
-  var pages = $('[data-page]'), multi = pages.length > 1;
-  var cur = multi ? (location.hash || '').slice(1) : location.pathname.split('/').pop().replace('.html', '');
-  var cp = pages.filter(p => p.dataset.page === cur)[0] || pages[0];
-  cur = cp.dataset.page;
+// 7. SIGN IN / REGISTER VIEW
+function renderLoginView() {
+  var view = $1('#appView');
+  view.innerHTML = `
+    <div class="hero">
+      <h1>Join GhostKitchen & Supper Club</h1>
+      <p>Connect with Cairo's culinary creators, commercial kitchen network, and secret supper clubs.</p>
+    </div>
 
-  if(cp.dataset.roles && cp.dataset.roles.split(' ').indexOf(role()) < 0){
-    toast('Sign in with the right role to open that page');
-    if(multi){ location.replace('#login'); return; }
-    location.replace('login.html');
-    return;
+    ${S.session ? `
+      <div class="card row" style="margin-bottom:20px">
+        <div>
+          <div class="muted">Currently signed in as</div>
+          <b style="font-size:17px">${esc(me())}</b> ${B('approved', role())}
+        </div>
+        <button class="logout-btn" data-act="logout">Sign out</button>
+      </div>
+    ` : ''}
+
+    <form class="card" novalidate data-form="login">
+      <h2>Sign in or Create Account</h2>
+      <label>Full Name</label>
+      <input name="name" type="text" value="Nour Hassan" placeholder="e.g. Nour Hassan">
+
+      <label>Email Address</label>
+      <input name="email" type="email" value="nour@example.com" placeholder="you@example.com">
+
+      <label>Password</label>
+      <input name="password" type="password" value="password123" placeholder="Choose a secure password">
+
+      <label>I am joining primarily as a:</label>
+      <div class="seg" style="margin-bottom:16px">
+        <label><input type="radio" name="role" value="attendee" checked><span>Dinner Guest</span></label>
+        <label><input type="radio" name="role" value="chef"><span>Guest Chef</span></label>
+        <label><input type="radio" name="role" value="host"><span>Kitchen Host</span></label>
+      </div>
+
+      <div class="msg err" role="alert" hidden></div>
+      <button type="submit" style="width:100%">Continue</button>
+    </form>
+  `;
+}
+
+function bCard(b, isHost) {
+  var s = by(S.slots, b.slot_id) || { start_time: b.start_time, end_time: b.end_time };
+  var kName = b.kitchen_name || (by(S.kitchens, s.kitchen_id) || {}).name || 'Kitchen Space';
+  var num = b.booking_no ? '#' + b.booking_no : '#' + (b.id || '').slice(0, 6);
+  var chefLabel = b.chef_name || b.chef || 'Chef';
+
+  return `
+    <div class="card">
+      <div class="row">
+        <b>Booking ${num}</b>
+        ${B(b.status)}
+      </div>
+      <div class="muted" style="margin:4px 0">${isHost ? ICONS.chef + ' Guest Chef: ' + esc(chefLabel) + ' · ' : ''}${ICONS.pin} ${esc(kName)}</div>
+      <div>${ICONS.cal} ${fmtSlot(s)}</div>
+      ${isHost && b.status === 'pending' ? `
+        <div class="row act" style="margin-top:12px">
+          <button data-act="approve" data-id="${b.id}">Approve Request</button>
+          <button class="bad" data-act="decline" data-id="${b.id}">Decline</button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+// ── ROUTER ──────────────────────────────────────────────────────────────────
+function route() {
+  var hash = (location.hash || '#events').slice(1);
+  updateNav();
+
+  if (hash === 'events') {
+    renderEventsView();
+  } else if (hash === 'kitchens') {
+    renderKitchensView();
+  } else if (hash === 'tickets') {
+    renderTicketsView();
+  } else if (hash.indexOf('chef') === 0) {
+    renderChefView();
+  } else if (hash.indexOf('host') === 0) {
+    renderHostView();
+  } else if (hash.indexOf('admin') === 0) {
+    renderAdminView();
+  } else if (hash === 'login') {
+    renderLoginView();
+  } else {
+    renderEventsView();
   }
-
-  if(multi){ pages.forEach(p => p.hidden = p !== cp); window.scrollTo(0, 0); }
-  $('nav [data-roles]').forEach(el => el.hidden = el.dataset.roles.split(' ').indexOf(role()) < 0);
-  $('.links a').forEach(a => {
-    var on = a.getAttribute('href').replace('#', '').replace('.html', '') === cur;
-    a.classList.toggle('on', on);
-    on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current');
-  });
-
-  var c = $1('#roleChip');
-  if(c) c.textContent = S.session ? role()[0].toUpperCase() + role().slice(1) + ' · ' + me().split(' ')[0] : 'Guest';
-
-  if(R[cur]) R[cur]();
-  gate(!S.session && !S.entered);
 }
 
 // ── AUTHENTICATION ──────────────────────────────────────────────────────────
@@ -552,8 +969,8 @@ async function loginOrRegister(name, email, password, r) {
     localStorage.setItem('gk_token', data.token);
     S.session = data.user;
     saveSession();
-    toast('Signed in as ' + data.user.name);
-    go(HOME[data.user.role]);
+    toast('Welcome back, ' + data.user.name + '!');
+    redirectAfterAuth(data.user.role);
   } catch (err) {
     if (err.message.indexOf('Invalid email') > -1 || err.message.indexOf('not found') > -1) {
       try {
@@ -567,162 +984,263 @@ async function loginOrRegister(name, email, password, r) {
         S.session = regData.user;
         saveSession();
         toast('Account created! Signed in as ' + regData.user.name);
-        go(HOME[regData.user.role]);
+        redirectAfterAuth(regData.user.role);
         return;
       } catch (regErr) {
-        toast('Auth error: ' + regErr.message);
+        toast('Registration error: ' + regErr.message);
         throw regErr;
       }
     }
-    toast('Login error: ' + err.message);
+    toast('Sign in failed: ' + err.message);
     throw err;
   }
 }
 
-// ── EVENT LISTENERS (CLICK ACTIONS) ─────────────────────────────────────────
+function redirectAfterAuth(r) {
+  if (r === 'host') location.hash = '#host-dashboard';
+  else if (r === 'chef') location.hash = '#kitchens';
+  else if (r === 'admin') location.hash = '#admin-console';
+  else location.hash = '#events';
+}
+
+// ── EVENT LISTENERS (CLICKS & ACTIONS) ──────────────────────────────────────
 document.addEventListener('click', async e => {
+  // Theme toggle
   if (e.target.closest('#themeToggle')) {
     e.preventDefault();
     toggleTheme();
     return;
   }
-  if(e.target.closest('#roleChip') && !S.session){
+
+  // Demo drawer toggle (minimize / expand)
+  if (e.target.closest('#demoToggle')) {
     e.preventDefault();
-    S.entered = false;
-    saveSession();
-    route();
+    var d = $1('#demoDrawer');
+    d.classList.toggle('minimized');
+    $1('#demoToggle').textContent = d.classList.contains('minimized') ? '▲ Tester Mode' : '✕';
     return;
   }
-  var g = e.target.closest('[data-go]');
-  if(g && bundle()){
-    e.preventDefault();
-    go(g.dataset.go);
+
+  // Modal close
+  if (e.target.closest('[data-act="modal-close"]') || e.target.id === 'modalContainer') {
+    closeModal();
     return;
   }
 
   var b = e.target.closest('[data-act]');
-  if(!b) return;
+  if (!b) return;
   var a = b.dataset.act;
   var id = b.dataset.id;
 
-  if(a === 'demo'){
+  // Reviewer Demo Persona Switching
+  if (a === 'demo') {
     var d = DEMO_USERS[b.dataset.role];
-    if(d) await loginOrRegister(d.name, d.email, d.password, d.role);
+    if (d) {
+      toast('Switching persona to ' + d.name + ' (' + d.role + ')...');
+      await loginOrRegister(d.name, d.email, d.password, d.role);
+    }
     return;
   }
-  if(a === 'gate-signin' || a === 'gate-back'){
-    var s = a === 'gate-signin';
-    $1('#gChoice').hidden = s;
-    $1('#gForm').hidden = !s;
-    if(s) $1('#gForm').elements.name.focus();
+
+  // Cook or Host Call to Action
+  if (a === 'open-cook-host') {
+    location.hash = '#login';
     return;
   }
-  if(a === 'gate-guest'){
-    S.entered = true;
-    saveSession();
-    toast('Browsing as a guest');
-    return route();
-  }
-  if(a === 'logout'){
+
+  // Logout
+  if (a === 'logout') {
     localStorage.removeItem('gk_token');
     S.session = null;
-    S.entered = false;
     saveSession();
-    toast('Logged out');
+    toast('Signed out successfully.');
+    location.hash = '#events';
     route();
     return;
   }
-  if(a === 'district'){
+
+  // District & Equipment Filters
+  if (a === 'district') {
     S.district = b.dataset.district;
     renderFilteredKitchens();
-    updateChipsUi();
+    updateKitchenChips();
     return;
   }
-  if(a === 'filter'){
+  if (a === 'filter') {
     var i = S.filters.indexOf(b.dataset.tag);
     i > -1 ? S.filters.splice(i, 1) : S.filters.push(b.dataset.tag);
     renderFilteredKitchens();
-    updateChipsUi();
+    updateKitchenChips();
     return;
   }
-  if(a === 'clearfilter'){
+  if (a === 'clearfilter') {
     S.filters = [];
     S.district = 'All';
     S.searchQuery = '';
-    var sIn = $1('#kSearch');
-    if (sIn) sIn.value = '';
+    var si = $1('#kSearch');
+    if (si) si.value = '';
     renderFilteredKitchens();
-    updateChipsUi();
+    updateKitchenChips();
     return;
   }
 
-  // Live Backend Mutations
+  // Open Creation Modals
+  if (a === 'modal-kitchen') {
+    openModal('List a Commercial Kitchen', `
+      <form class="card" novalidate data-form="kitchen" style="border:none;box-shadow:none;padding:0;margin:0">
+        <label>Kitchen / Studio Name</label>
+        <input name="name" type="text" placeholder="e.g. Nile Artisan Culinary Hub" required>
+
+        <label>Street Address & District</label>
+        <input name="address" type="text" placeholder="e.g. 14 Kasr El Aini, Garden City, Cairo" required>
+
+        <div class="grid2">
+          <div>
+            <label>MOH Permit / License</label>
+            <input name="license_info" type="text" placeholder="e.g. LIC-9281 · Health Ministry" required>
+          </div>
+          <div>
+            <label>Hourly Rate (EGP)</label>
+            <input name="hourly_rate" type="number" placeholder="320" min="50" required>
+          </div>
+        </div>
+
+        <label>Commercial Equipment (comma separated)</label>
+        <input name="equip" type="text" placeholder="Walk-in chiller, Convection ovens, Gas range">
+
+        <div class="msg err" role="alert" hidden></div>
+        <button type="submit" style="width:100%;margin-top:10px">Submit for License Verification</button>
+      </form>
+    `);
+    return;
+  }
+
+  if (a === 'modal-slot') {
+    var kitchens = S.kitchens || [];
+    if (!kitchens.length) {
+      toast('Please list a kitchen before scheduling availability slots.');
+      return;
+    }
+    openModal('Add Availability Shift Slot', `
+      <form class="card" novalidate data-form="slot" style="border:none;box-shadow:none;padding:0;margin:0">
+        <label>Select Commercial Kitchen</label>
+        <select name="kitchen_id">
+          ${kitchens.map(k => '<option value="' + k.id + '">' + esc(k.name) + '</option>').join('')}
+        </select>
+
+        <div class="grid2">
+          <div>
+            <label>Start Time</label>
+            <input name="start_time" type="datetime-local" required>
+          </div>
+          <div>
+            <label>End Time</label>
+            <input name="end_time" type="datetime-local" required>
+          </div>
+        </div>
+
+        <div class="msg err" role="alert" hidden></div>
+        <button type="submit" style="width:100%;margin-top:10px">Publish Availability Slot</button>
+      </form>
+    `);
+    return;
+  }
+
+  if (a === 'modal-event') {
+    var approvedBookings = (S.bookings || []).filter(b => b.status === 'approved');
+    if (!approvedBookings.length) {
+      toast('You need an approved kitchen shift before publishing a pop-up dinner.');
+      location.hash = '#kitchens';
+      return;
+    }
+    openModal('Publish Pop-up Supper Club Dinner', `
+      <form class="card" novalidate data-form="event" style="border:none;box-shadow:none;padding:0;margin:0">
+        <label>Select Approved Kitchen Shift</label>
+        <select name="booking_id">
+          ${approvedBookings.map(b => '<option value="' + b.id + '">#' + (b.booking_no || b.id.slice(0, 6)) + ' · ' + esc(b.kitchen_name || 'Kitchen') + '</option>').join('')}
+        </select>
+
+        <label>Pop-up Title & Theme</label>
+        <input name="title" type="text" placeholder="e.g. Modern Cairo: 5-Course Nile Tasting Menu" required>
+
+        <label>Menu Description & Concept</label>
+        <textarea name="menu_description" rows="3" placeholder="Describe the courses, seasonal ingredients, and atmosphere..." required></textarea>
+
+        <div class="grid2">
+          <div>
+            <label>Ticket Price (EGP)</label>
+            <input name="ticket_price" type="number" value="450" min="50" required>
+          </div>
+          <div>
+            <label>Guest Capacity (Seats)</label>
+            <input name="capacity" type="number" value="16" min="1" required>
+          </div>
+        </div>
+
+        <div class="msg err" role="alert" hidden></div>
+        <button type="submit" style="width:100%;margin-top:10px">Publish Pop-up Event</button>
+      </form>
+    `);
+    return;
+  }
+
+  // Live Mutations
   try {
-    if(a === 'request' && role() === 'chef'){
+    if (a === 'request' && role() === 'chef') {
       await api('POST', '/bookings', { slot_id: id });
-      toast('Request sent to kitchen host!');
+      toast('Booking request sent to kitchen host!');
       route();
-    }
-    else if(a === 'approve' && role() === 'host'){
+    } else if (a === 'approve' && role() === 'host') {
       await api('PATCH', '/bookings/' + id + '/status', { status: 'approved' });
-      toast('Booking request approved!');
+      toast('Chef booking approved!');
       route();
-    }
-    else if(a === 'decline' && role() === 'host'){
+    } else if (a === 'decline' && role() === 'host') {
       await api('PATCH', '/bookings/' + id + '/status', { status: 'declined' });
-      toast('Booking request declined.');
+      toast('Booking declined.');
       route();
-    }
-    else if(a === 'verify' && role() === 'admin'){
+    } else if (a === 'verify' && role() === 'admin') {
       await api('PATCH', '/kitchens/' + id + '/verify', { status: 'verified' });
-      toast('Kitchen license verified!');
+      toast('Commercial license approved!');
       route();
-    }
-    else if(a === 'revoke' && role() === 'admin'){
+    } else if (a === 'reject' && role() === 'admin') {
       await api('PATCH', '/kitchens/' + id + '/verify', { status: 'rejected' });
-      toast('Kitchen license revoked.');
-      route();
-    }
-    else if(a === 'reject' && role() === 'admin'){
-      await api('PATCH', '/kitchens/' + id + '/verify', { status: 'rejected' });
-      toast('Kitchen license rejected.');
+      toast('License rejected.');
       route();
     }
   } catch (err) {
-    toast('Action failed: ' + err.message);
+    toast('Action error: ' + err.message);
   }
 });
 
-// ── FORM SUBMISSIONS (SAVE TO DATABASE) ─────────────────────────────────────
-function fail(f, m, el){
+// ── FORM SUBMISSIONS ────────────────────────────────────────────────────────
+function fail(f, m, el) {
   var er = $1('.msg.err', f);
-  if(er){ er.textContent = m; er.hidden = false; }
+  if (er) { er.textContent = m; er.hidden = false; }
   toast(m);
-  if(el){ el.setAttribute('aria-invalid', 'true'); el.focus(); }
+  if (el) { el.setAttribute('aria-invalid', 'true'); el.focus(); }
 }
 
 document.addEventListener('submit', async e => {
   var f = e.target.closest('form');
-  if(!f) return;
+  if (!f) return;
   e.preventDefault();
 
   var er = $1('.msg.err', f);
-  if(er) er.hidden = true;
+  if (er) er.hidden = true;
   f.querySelectorAll('[aria-invalid]').forEach(i => i.removeAttribute('aria-invalid'));
 
   var t = f.dataset.form, x = f.elements, v = n => (x[n] ? x[n].value.trim() : '');
 
   try {
-    if(t === 'login'){
-      if(!v('email')) return fail(f, 'Please enter your email.', x.email);
-      if(!v('password_hash')) return fail(f, 'Please enter a password.', x.password_hash);
+    if (t === 'login') {
+      if (!v('email')) return fail(f, 'Please enter your email.', x.email);
+      if (!v('password')) return fail(f, 'Please enter your password.', x.password);
       var r = f.querySelector('input[name="role"]:checked')?.value || 'attendee';
-      await loginOrRegister(v('name'), v('email'), v('password_hash'), r);
-      gate(false);
+      await loginOrRegister(v('name'), v('email'), v('password'), r);
     }
-    else if(t === 'kitchen'){
-      if(!v('name') || !v('address') || !v('license_info')) return fail(f, 'Name, address and license info are required.');
-      if(!(+x.hourly_rate.value > 0)) return fail(f, 'Enter an hourly rate above 0 EGP.', x.hourly_rate);
+    else if (t === 'kitchen') {
+      if (!v('name') || !v('address') || !v('license_info')) return fail(f, 'All fields are required.');
+      if (!(+x.hourly_rate.value > 0)) return fail(f, 'Enter an hourly rate above 0 EGP.', x.hourly_rate);
 
       var equipArr = v('equip') ? v('equip').split(',').map(s => s.trim()).filter(Boolean) : [];
       await api('POST', '/kitchens', {
@@ -732,28 +1250,29 @@ document.addEventListener('submit', async e => {
         license_info: v('license_info'),
         equipment: equipArr
       });
-      f.reset();
-      toast('Kitchen submitted for admin review!');
+      closeModal();
+      toast('Kitchen submitted for verification!');
       route();
     }
-    else if(t === 'slot'){
-      if(!x.start_time.value || !x.end_time.value) return fail(f, 'Choose a start and end time.');
+    else if (t === 'slot') {
+      if (!x.start_time.value || !x.end_time.value) return fail(f, 'Choose start and end times.');
       var a = new Date(x.start_time.value), z = new Date(x.end_time.value);
-      if(z <= a) return fail(f, 'End time must be after start time.', x.end_time);
+      if (z <= a) return fail(f, 'End time must be after start time.', x.end_time);
 
       await api('POST', '/slots', {
         kitchen_id: x.kitchen_id.value,
         start_time: a.toISOString(),
         end_time: z.toISOString()
       });
-      f.reset();
-      toast('Availability slot added to kitchen!');
+      closeModal();
+      toast('Availability slot published!');
       route();
     }
-    else if(t === 'event'){
-      if(!v('title')) return fail(f, 'Give your event a title.', x.title);
-      if(!(+x.ticket_price.value > 0)) return fail(f, 'Enter a ticket price above 0 EGP.', x.ticket_price);
-      if(!(+x.capacity.value >= 1)) return fail(f, 'Capacity must be at least 1.', x.capacity);
+    else if (t === 'event') {
+      if (!v('title')) return fail(f, 'Event title is required.', x.title);
+      if (!v('menu_description')) return fail(f, 'Menu description is required.', x.menu_description);
+      if (!(+x.ticket_price.value > 0)) return fail(f, 'Enter a valid ticket price.', x.ticket_price);
+      if (!(+x.capacity.value >= 1)) return fail(f, 'Capacity must be at least 1.', x.capacity);
 
       await api('POST', '/events', {
         booking_id: x.booking_id.value,
@@ -762,22 +1281,26 @@ document.addEventListener('submit', async e => {
         ticket_price: +x.ticket_price.value,
         capacity: +x.capacity.value
       });
-      f.reset();
-      toast('Pop-up event published!');
-      go('event');
+      closeModal();
+      toast('Pop-up supper club published!');
+      location.hash = '#events';
     }
-    else if(t === 'reserve'){
+    else if (t === 'reserve') {
+      if (role() === 'guest') {
+        toast('Please sign in or select a guest demo role to reserve.');
+        location.hash = '#login';
+        return;
+      }
       var q = x.quantity, n = parseInt(q.value, 10), left = +f.dataset.left;
-      if(!q.value.trim()) return fail(f, 'Please enter how many seats you want.', q);
-      if(isNaN(n) || n < 1) return fail(f, 'Quantity must be at least 1.', q);
-      if(n > left) return fail(f, 'Only ' + left + ' seats are left.', q);
+      if (!q.value.trim() || isNaN(n) || n < 1) return fail(f, 'Enter how many seats you would like to reserve.', q);
+      if (n > left) return fail(f, 'Only ' + left + ' seats remain.', q);
 
       var res = await api('POST', '/tickets', {
         event_id: f.dataset.id,
         quantity: n
       });
-      flash = { id: f.dataset.id, text: n + (n > 1 ? ' seats' : ' seat') + ' for ' + fmt(res.ticket.total_price) + '.' };
-      toast('Seats reserved successfully! Ref #' + res.ticket.ref_no);
+      flash = { id: f.dataset.id, text: n + (n > 1 ? ' seats' : ' seat') + ' for ' + fmt(res.ticket.total_price) };
+      toast('Seats reserved! Ticket confirmation #T-' + res.ticket.ref_no);
       route();
     }
   } catch (err) {
@@ -785,24 +1308,22 @@ document.addEventListener('submit', async e => {
   }
 });
 
-// ── REAL-TIME INPUT LISTENERS ───────────────────────────────────────────────
+// ── REAL-TIME SEARCH & TICKET PRICING ───────────────────────────────────────
 document.addEventListener('input', e => {
-  // Live search input
   if (e.target.id === 'kSearch') {
     S.searchQuery = e.target.value;
     renderFilteredKitchens();
     return;
   }
 
-  // Live ticket price calculator
   var q = e.target;
-  if(q.name !== 'quantity') return;
+  if (q.name !== 'quantity') return;
   var f = q.form, n = Math.max(0, parseInt(q.value, 10) || 0);
   var tot = $1('.total', f);
-  if(tot) tot.textContent = fmt(n * (+f.dataset.price || 0));
+  if (tot) tot.textContent = fmt(n * (+f.dataset.price || 0));
   q.removeAttribute('aria-invalid');
   var er = $1('.msg.err', f);
-  if(er) er.hidden = true;
+  if (er) er.hidden = true;
 });
 
 // ── INITIALIZE ──────────────────────────────────────────────────────────────
