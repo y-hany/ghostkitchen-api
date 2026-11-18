@@ -331,7 +331,9 @@ function updateNav() {
     `;
   }
 
-  navLinks.innerHTML = linksHtml;
+  if (navLinks) navLinks.innerHTML = linksHtml;
+  var bottomNav = $1('#bottomNav');
+  if (bottomNav) bottomNav.innerHTML = linksHtml;
 
   $$('.demo-role-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.role === r);
