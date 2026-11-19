@@ -87,7 +87,8 @@ var ICONS = {
   heartFilled: '<svg class="inline-ico" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
   star: '<svg class="inline-ico" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
   share: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>',
-  qr: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>'
+  qr: '<svg class="inline-ico" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+  navAbout: '<svg class="nav-ico" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
 };
 
 // ── THEME MANAGER ───────────────────────────────────────────────────────────
@@ -389,14 +390,16 @@ function updateNav() {
   var linksHtml = '';
   if (r === 'guest') {
     linksHtml = [
+      navItem('#about', 'about', cur, ICONS.navAbout, 'Guide'),
       navItem('#events', 'events', cur, ICONS.navDinner, 'Supper Clubs'),
-      navItem('#kitchens', 'kitchens', cur, ICONS.navKitchen, 'Kitchen Spaces'),
+      navItem('#kitchens', 'kitchens', cur, ICONS.navKitchen, 'Spaces'),
       navItem('#login', 'login', cur, ICONS.navLogin, 'Sign In')
     ].join('');
     userAction.innerHTML = `<button class="nav-cta" data-act="open-cook-host">Cook / Host</button>`;
   } else if (r === 'attendee') {
     var ticketCount = (S.tickets || []).length;
     linksHtml = [
+      navItem('#about', 'about', cur, ICONS.navAbout, 'Guide'),
       navItem('#events', 'events', cur, ICONS.navDinner, 'Supper Clubs'),
       navItem('#tickets', 'tickets', cur, ICONS.navTicket, 'My Passes', ticketCount)
     ].join('');
@@ -408,7 +411,8 @@ function updateNav() {
     `;
   } else if (r === 'chef') {
     linksHtml = [
-      navItem('#kitchens', 'kitchens', cur, ICONS.navKitchen, 'Kitchen Spaces'),
+      navItem('#about', 'about', cur, ICONS.navAbout, 'Guide'),
+      navItem('#kitchens', 'kitchens', cur, ICONS.navKitchen, 'Spaces'),
       navItem('#chef-bookings', 'chef', cur, ICONS.navBookings, 'My Shifts'),
       navItem('#events', 'events', cur, ICONS.navDinner, 'Supper Clubs')
     ].join('');
@@ -421,6 +425,7 @@ function updateNav() {
     `;
   } else if (r === 'host') {
     linksHtml = [
+      navItem('#about', 'about', cur, ICONS.navAbout, 'Guide'),
       navItem('#host-dashboard', 'host', cur, ICONS.navHub, 'Kitchen Hub'),
       navItem('#kitchens', 'kitchens', cur, ICONS.navKitchen, 'Spaces')
     ].join('');
@@ -433,9 +438,9 @@ function updateNav() {
     `;
   } else if (r === 'admin') {
     linksHtml = [
+      navItem('#about', 'about', cur, ICONS.navAbout, 'Guide'),
       navItem('#admin-console', 'admin', cur, ICONS.navAdmin, 'Verifications'),
-      navItem('#kitchens', 'kitchens', cur, ICONS.navKitchen, 'Kitchens'),
-      navItem('#events', 'events', cur, ICONS.navDinner, 'Pop-ups')
+      navItem('#kitchens', 'kitchens', cur, ICONS.navKitchen, 'Kitchens')
     ].join('');
     userAction.innerHTML = `
       <div class="user-menu">
@@ -458,7 +463,263 @@ function getActiveRoute() {
   var h = (location.hash || '').slice(1).toLowerCase();
   var p = location.pathname.replace(/^\//, '').toLowerCase();
   var target = h || p || 'events';
-  return target.split('-')[0];
+  var base = target.split('-')[0];
+  if (base === 'about' || base === 'overview' || base === 'guide' || base === 'info') return 'about';
+  return base;
+}
+
+// ── VIEW 0: ABOUT & PLATFORM GUIDE (Brand / Main Explainer Landing) ─────────
+function renderAboutView() {
+  var view = $1('#appView');
+  view.innerHTML = `
+    <div class="about-hero">
+      <div class="about-pill">
+        <span class="about-pill-dot"></span>
+        <span>Egypt's First Licensed Shared Culinary Platform</span>
+      </div>
+      <h1 class="about-hero-title">Commercial Kitchens &amp; Secret Supper Clubs</h1>
+      <p class="about-hero-sub">
+        GhostKitchen Cairo bridges the gap between Ministry of Health-licensed commercial kitchen spaces and culinary talent — allowing guest chefs to launch pop-ups without million-pound investments, while licensed facilities monetize off-peak shifts.
+      </p>
+
+      <div class="about-quick-actions">
+        <a href="#events" class="btn btn-primary about-cta-btn">
+          <span>🍽️ Browse Supper Clubs</span>
+        </a>
+        <a href="#kitchens" class="btn btn-ghost about-cta-btn">
+          <span>👨‍🍳 Commercial Kitchens</span>
+        </a>
+        <button type="button" class="btn btn-ghost about-cta-btn" data-act="open-tester-tour">
+          <span>⚡ Try Tester Mode</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Platform Impact Stats -->
+    <div class="about-stats-grid">
+      <div class="about-stat-card">
+        <div class="stat-number">100%</div>
+        <div class="stat-title">MOH Licensed</div>
+        <div class="stat-desc">Inspected spaces with commercial hood suppression &amp; grease traps</div>
+      </div>
+      <div class="about-stat-card">
+        <div class="stat-number">4–8h</div>
+        <div class="stat-title">Flexible Shifts</div>
+        <div class="stat-desc">Rent by the shift without multi-million EGP leases or buildout costs</div>
+      </div>
+      <div class="about-stat-card">
+        <div class="stat-number">250+</div>
+        <div class="stat-title">Seats Hosted</div>
+        <div class="stat-desc">Pop-up dinners, private chef tastings, and secret supper clubs</div>
+      </div>
+      <div class="about-stat-card">
+        <div class="stat-number">100%</div>
+        <div class="stat-title">Escrow Protected</div>
+        <div class="stat-desc">Guaranteed payouts and digital QR verification for guests</div>
+      </div>
+    </div>
+
+    <!-- The 3 Pillars: Diners, Chefs, Hosts -->
+    <div class="about-section-header">
+      <h2>How the Platform Empowers Everyone</h2>
+      <p>A three-sided culinary ecosystem built for Egypt's thriving gastronomic scene.</p>
+    </div>
+
+    <div class="about-pillars-grid">
+      <!-- Pillar 1: Diners -->
+      <div class="card about-pillar-card">
+        <div class="pillar-icon-badge diner-badge">🍽️</div>
+        <h3>For Diners &amp; Food Lovers</h3>
+        <p class="pillar-lead">Experience intimate culinary residencies you won't find in ordinary restaurants.</p>
+        <ul class="pillar-list">
+          <li><strong>Secret Supper Clubs:</strong> Exclusive one-night-only tasting menus crafted by Cairo's most innovative independent chefs.</li>
+          <li><strong>Verified Food Safety:</strong> Every event is hosted in an official, licensed commercial facility with rigorous hygiene standards.</li>
+          <li><strong>Digital Dining Passes:</strong> Instant ticket confirmation with dynamic QR code entry and simple dietary restriction notes.</li>
+        </ul>
+        <div class="pillar-footer">
+          <a href="#events" class="btn btn-sm btn-primary">Browse Upcoming Dinners →</a>
+        </div>
+      </div>
+
+      <!-- Pillar 2: Chefs -->
+      <div class="card about-pillar-card">
+        <div class="pillar-icon-badge chef-badge">👨‍🍳</div>
+        <h3>For Guest Chefs &amp; Bakers</h3>
+        <p class="pillar-lead">Launch restaurant pop-ups and test new culinary concepts with zero capital risk.</p>
+        <ul class="pillar-list">
+          <li><strong>Hourly Shift Rentals:</strong> Book off-peak shifts in licensed commercial facilities starting from 150–350 EGP/hour.</li>
+          <li><strong>Commercial Equipment:</strong> Access convection ovens, bakery decks, walk-in chillers, and 6-burner ranges ready to fire.</li>
+          <li><strong>Built-in Ticket Sales:</strong> Publish your supper club, set your ticket price and seat capacity, and sell tickets directly.</li>
+        </ul>
+        <div class="pillar-footer">
+          <button type="button" class="btn btn-sm btn-primary" data-act="demo" data-role="chef">Experience as Chef Omar →</button>
+        </div>
+      </div>
+
+      <!-- Pillar 3: Hosts -->
+      <div class="card about-pillar-card">
+        <div class="pillar-icon-badge host-badge">🏠</div>
+        <h3>For Commercial Kitchen Hosts</h3>
+        <p class="pillar-lead">Monetize idle dark kitchen hours without adding operational complexity.</p>
+        <ul class="pillar-list">
+          <li><strong>Dark Hours Monetization:</strong> Turn idle early mornings, late evenings, or quiet days into steady recurring revenue.</li>
+          <li><strong>Total Booking Control:</strong> Review incoming chef portfolios, menus, and food safety certifications before approving.</li>
+          <li><strong>Fast Payouts:</strong> Automated escrow settlement for completed shifts with host verification tools.</li>
+        </ul>
+        <div class="pillar-footer">
+          <button type="button" class="btn btn-sm btn-primary" data-act="demo" data-role="host">Experience as Host Layla →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step by Step Workflow -->
+    <div class="about-workflow-card card">
+      <div class="about-section-header in-card">
+        <h2>The 5-Step Platform Journey</h2>
+        <p>From kitchen verification to the final dessert course.</p>
+      </div>
+
+      <div class="workflow-steps-list">
+        <div class="workflow-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Commercial Facility Verification</h4>
+            <p>Hosts submit their commercial kitchen with MOH licenses and equipment specs. Platform Admin audits credentials.</p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Shift Availability Published</h4>
+            <p>Hosts set open shift slots (e.g. 18:00–23:00) with custom hourly rates. Shifts appear on the chef booking directory.</p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Chef Shift &amp; Pop-up Booking</h4>
+            <p>Guest chefs reserve the shift, submit their tasting menu and ticket pricing. Host approves the booking.</p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>Diners Book Seats &amp; Get QR Passes</h4>
+            <p>Food lovers discover the pop-up, reserve seats, specify dietary requirements, and receive a secure QR dining pass.</p>
+          </div>
+        </div>
+
+        <div class="workflow-step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h4>Event Execution &amp; Check-In</h4>
+            <p>Chefs cook in the licensed facility, scan diner QR passes at the door, and payouts are automatically released.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Persona Switcher Test Drive -->
+    <div class="card about-simulator-card">
+      <div class="about-section-header in-card">
+        <h2>Interactive Platform Simulator</h2>
+        <p>Switch between all 4 personas with 1 click to test the full ecosystem in action:</p>
+      </div>
+
+      <div class="simulator-grid">
+        <button type="button" class="sim-role-card" data-act="demo" data-role="attendee">
+          <div class="sim-icon">🍽️</div>
+          <div class="sim-role-name">Diner (Mariam)</div>
+          <div class="sim-role-sub">Browse secret supper clubs &amp; view digital QR passes</div>
+          <span class="sim-btn-pill">Test as Diner →</span>
+        </button>
+
+        <button type="button" class="sim-role-card" data-act="demo" data-role="chef">
+          <div class="sim-icon">👨‍🍳</div>
+          <div class="sim-role-name">Chef (Omar)</div>
+          <div class="sim-role-sub">Browse kitchen slots, book shifts &amp; publish pop-ups</div>
+          <span class="sim-btn-pill">Test as Chef →</span>
+        </button>
+
+        <button type="button" class="sim-role-card" data-act="demo" data-role="host">
+          <div class="sim-icon">🏠</div>
+          <div class="sim-role-name">Host (Layla)</div>
+          <div class="sim-role-sub">List commercial kitchens, add shifts &amp; approve bookings</div>
+          <span class="sim-btn-pill">Test as Host →</span>
+        </button>
+
+        <button type="button" class="sim-role-card" data-act="demo" data-role="admin">
+          <div class="sim-icon">⚙️</div>
+          <div class="sim-role-name">Platform Admin</div>
+          <div class="sim-role-sub">Verify facility licenses, audit food safety &amp; approve pop-ups</div>
+          <span class="sim-btn-pill">Test as Admin →</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- FAQ Accordion -->
+    <div class="about-faq-section">
+      <div class="about-section-header">
+        <h2>Frequently Asked Questions</h2>
+        <p>Everything you need to know about GhostKitchen Cairo.</p>
+      </div>
+
+      <div class="faq-list">
+        <details class="faq-item card">
+          <summary class="faq-summary">
+            <span>Are these commercial kitchens officially licensed?</span>
+            <span class="faq-icon">▼</span>
+          </summary>
+          <div class="faq-body">
+            Yes. Every host facility on the GhostKitchen platform must submit their official commercial food preparation permit or Ministry of Health inspection documentation. Our platform administration team audits all documents before facilities are activated.
+          </div>
+        </details>
+
+        <details class="faq-item card">
+          <summary class="faq-summary">
+            <span>How do secret supper club locations work?</span>
+            <span class="faq-icon">▼</span>
+          </summary>
+          <div class="faq-body">
+            To preserve the exclusive atmosphere and guest privacy, the general district (e.g. Zamalek, Maadi, Dokki) is displayed publicly. The exact address and arrival instructions are unlocked on your Digital Pass immediately after reserving.
+          </div>
+        </details>
+
+        <details class="faq-item card">
+          <summary class="faq-summary">
+            <span>Can independent home cooks or caterers rent kitchen shifts?</span>
+            <span class="faq-icon">▼</span>
+          </summary>
+          <div class="faq-body">
+            Absolutely. GhostKitchen Cairo was created specifically to eliminate barriers for talented culinarians. As long as you follow basic food safety protocols, you can rent commercial facilities by the shift to prepare catering orders, bake goods, or host pop-up dinners.
+          </div>
+        </details>
+
+        <details class="faq-item card">
+          <summary class="faq-summary">
+            <span>How does payment and escrow protection work?</span>
+            <span class="faq-icon">▼</span>
+          </summary>
+          <div class="faq-body">
+            All ticket reservations and shift fees are handled securely. Diner ticket payments are held in escrow and released to the guest chef upon event check-in, ensuring diners only pay for verified experiences and chefs receive their earnings reliably.
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <!-- Final CTA Banner -->
+    <div class="about-bottom-cta">
+      <h3>Ready to experience Cairo's underground dining scene?</h3>
+      <p>Explore upcoming pop-ups or test drive any persona in one tap.</p>
+      <div class="about-quick-actions">
+        <a href="#events" class="btn btn-primary">Browse Supper Clubs</a>
+        <a href="#login" class="btn btn-ghost">Sign In / Register</a>
+      </div>
+    </div>
+  `;
 }
 
 // ── VIEW 1: SUPPER CLUBS & POP-UP DINING (Default Diner Landing) ────────────
@@ -1813,6 +2074,7 @@ function route() {
   updateNav();
 
   var titles = {
+    about: 'Platform Guide & About — GhostKitchen Cairo',
     events: 'Pop-ups & Supper Clubs — GhostKitchen Cairo',
     kitchens: 'Commercial Kitchens & Spaces — GhostKitchen Cairo',
     tickets: 'My Dining Passes — GhostKitchen Cairo',
@@ -1823,7 +2085,9 @@ function route() {
   };
   document.title = titles[r] || 'GhostKitchen & Supper Club Cairo';
 
-  if (r === 'events') {
+  if (r === 'about') {
+    renderAboutView();
+  } else if (r === 'events') {
     renderEventsView();
   } else if (r === 'kitchens') {
     renderKitchensView();
@@ -1907,6 +2171,16 @@ document.addEventListener('click', async e => {
     e.preventDefault();
     var d = $1('#demoDrawer');
     if (d) d.classList.add('minimized');
+    return;
+  }
+  if (e.target.closest('[data-act="open-tester-tour"]')) {
+    e.preventDefault();
+    var d = $1('#demoDrawer');
+    if (d) {
+      d.classList.remove('minimized');
+      d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+    toast('Tester mode active! Pick a persona to explore.');
     return;
   }
 
