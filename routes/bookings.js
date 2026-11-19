@@ -8,6 +8,13 @@
 const router = require('express').Router();
 const pool   = require('../db/pool');
 const { verifyToken, requireRole } = require('../middleware/auth');
+const { validateUUID } = require('../middleware/validate');
+
+function rollback(client, res, status, error) {
+  return client.query('ROLLBACK')
+    .catch(() => {})
+    .finally(() => res.status(status).json({ error }));
+}
 
 // ── GET /api/bookings ─────────────────────────────────────────────────────────
 router.get('/', verifyToken, async (req, res) => {
@@ -69,7 +76,7 @@ router.get('/', verifyToken, async (req, res) => {
 });
 
 // ── POST /api/bookings ────────────────────────────────────────────────────────
-router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
+router.post('/', verifyToken, requireRole('chef'), validateUUID('slot_id'), async (req, res) => {
   try {
     const { slot_id } = req.body;
     if (!slot_id)
@@ -77,7 +84,7 @@ router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
 
     // Slot must exist and belong to a verified kitchen
     const { rows: sRows } = await pool.query(
-      `SELECT s.id, s.status, k.verification_status
+      `SELECT s.id, s.status, s.start_time, s.end_time, k.id AS kitchen_id, k.host_id, k.verification_status
        FROM slots s
        JOIN kitchens k ON k.id = s.kitchen_id
        WHERE s.id = $1`,
@@ -89,6 +96,10 @@ router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
       return res.status(400).json({ error: 'That kitchen is not yet verified.' });
     if (sRows[0].status === 'booked')
       return res.status(409).json({ error: 'That slot is already booked.' });
+    if (new Date(sRows[0].start_time) <= new Date())
+      return res.status(400).json({ error: 'Cannot book a kitchen shift that has already started or passed.' });
+    if (sRows[0].host_id === req.user.id)
+      return res.status(400).json({ error: 'Hosts cannot request shifts on their own kitchens.' });
 
     // Duplicate request guard (the unique index covers this, but give a clear message)
     const { rows: dup } = await pool.query(
@@ -116,7 +127,7 @@ router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
 // 2. Set booking status = 'approved', decided_at = now().
 // 3. Mark the slot as 'booked'.
 // 4. Decline all other pending requests for the same slot.
-router.patch('/:id/approve', verifyToken, requireRole('host'), async (req, res) => {
+router.patch('/:id/approve', verifyToken, requireRole('host'), validateUUID(), async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -172,7 +183,7 @@ router.patch('/:id/approve', verifyToken, requireRole('host'), async (req, res) 
 });
 
 // ── PATCH /api/bookings/:id/decline ──────────────────────────────────────────
-router.patch('/:id/decline', verifyToken, requireRole('host'), async (req, res) => {
+router.patch('/:id/decline', verifyToken, requireRole('host'), validateUUID(), async (req, res) => {
   try {
     const { rows: bRows } = await pool.query(
       `SELECT b.id, b.status, k.host_id

@@ -6,9 +6,10 @@
 const router = require('express').Router();
 const pool   = require('../db/pool');
 const { verifyToken, requireRole } = require('../middleware/auth');
+const { validateUUID } = require('../middleware/validate');
 
 // ── GET /api/slots?kitchen_id=... ─────────────────────────────────────────────
-router.get('/', async (req, res) => {
+router.get('/', validateUUID('kitchen_id'), async (req, res) => {
   try {
     const { kitchen_id } = req.query;
     let rows;
@@ -34,7 +35,7 @@ router.get('/', async (req, res) => {
 });
 
 // ── POST /api/slots ───────────────────────────────────────────────────────────
-router.post('/', verifyToken, requireRole('host'), async (req, res) => {
+router.post('/', verifyToken, requireRole('host'), validateUUID('kitchen_id'), async (req, res) => {
   try {
     const { kitchen_id, start_time, end_time } = req.body;
 
@@ -52,13 +53,39 @@ router.post('/', verifyToken, requireRole('host'), async (req, res) => {
     if (isNaN(end.getTime()))   return res.status(400).json({ error: 'end_time is not a valid date.' });
     if (end <= start)           return res.status(400).json({ error: 'end_time must be after start_time.' });
 
-    // Confirm the kitchen belongs to the calling host
+    // Enforce future time
+    if (start < new Date()) {
+      return res.status(400).json({ error: 'Shift slot start time must be in the future.' });
+    }
+
+    // Enforce reasonable shift duration (minimum 1 hour, maximum 24 hours)
+    const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+    if (durationHours < 1) {
+      return res.status(400).json({ error: 'Shift slot duration must be at least 1 hour.' });
+    }
+    if (durationHours > 24) {
+      return res.status(400).json({ error: 'Shift slot duration cannot exceed 24 hours.' });
+    }
+
+    // Confirm the kitchen belongs to the calling host and is not rejected
     const { rows: kRows } = await pool.query(
-      'SELECT id FROM kitchens WHERE id = $1 AND host_id = $2',
+      'SELECT id, verification_status FROM kitchens WHERE id = $1 AND host_id = $2',
       [kitchen_id, req.user.id]
     );
     if (!kRows.length)
       return res.status(403).json({ error: 'Kitchen not found or does not belong to you.' });
+
+    // Check for overlapping shift slots in this kitchen
+    const { rows: overlap } = await pool.query(
+      `SELECT id FROM slots
+       WHERE kitchen_id = $1
+         AND NOT (end_time <= $2 OR start_time >= $3)
+       LIMIT 1`,
+      [kitchen_id, start.toISOString(), end.toISOString()]
+    );
+    if (overlap.length) {
+      return res.status(409).json({ error: 'A shift slot already exists that overlaps with this time range.' });
+    }
 
     const { rows } = await pool.query(
       `INSERT INTO slots (kitchen_id, start_time, end_time)

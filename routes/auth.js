@@ -8,9 +8,11 @@ const pool    = require('../db/pool');
 const bcrypt  = require('bcrypt');
 const jwt     = require('jsonwebtoken');
 const { verifyToken } = require('../middleware/auth');
+const { isValidEmail, sanitizeText } = require('../middleware/validate');
 
-const BCRYPT_ROUNDS = 12;
-const VALID_ROLES   = ['host', 'chef', 'attendee', 'admin'];
+const BCRYPT_ROUNDS          = 12;
+const VALID_ROLES            = ['host', 'chef', 'attendee', 'admin'];
+const PUBLIC_REGISTER_ROLES  = ['host', 'chef', 'attendee'];
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -18,7 +20,7 @@ function signToken(user) {
   return jwt.sign(
     { id: user.id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: '7d' }
+    { algorithm: 'HS256', expiresIn: '7d' }
   );
 }
 
@@ -36,19 +38,21 @@ router.post('/register', async (req, res) => {
 
     // ── Validation ────────────────────────────────────────────────────────
     const errors = [];
-    if (!name || String(name).trim().length < 2)
-      errors.push('name must be at least 2 characters.');
-    if (!email || !/^\S+@\S+\.\S+$/.test(String(email).trim()))
-      errors.push('email must be a valid address.');
+    if (!name || String(name).trim().length < 2 || String(name).length > 100)
+      errors.push('name must be between 2 and 100 characters.');
+    if (!isValidEmail(email))
+      errors.push('email must be a valid email address (max 254 characters).');
     if (!password || String(password).length < 8)
       errors.push('password must be at least 8 characters.');
-    if (!VALID_ROLES.includes(role))
-      errors.push(`role must be one of: ${VALID_ROLES.join(', ')}.`);
+    if (password && String(password).length > 128)
+      errors.push('password must be at most 128 characters.');
+    if (!PUBLIC_REGISTER_ROLES.includes(role))
+      errors.push(`role must be one of: ${PUBLIC_REGISTER_ROLES.join(', ')}.`);
     if (errors.length)
       return res.status(400).json({ error: errors.join(' ') });
 
     const cleanEmail = String(email).trim().toLowerCase();
-    const cleanName  = String(name).trim();
+    const cleanName  = sanitizeText(name, 100);
 
     // ── Check duplicate email (case-insensitive index already exists) ─────
     const dup = await pool.query(
@@ -117,10 +121,18 @@ router.post('/login', async (req, res) => {
 // ── POST /api/demo-login ──────────────────────────────────────────────────────
 router.post('/demo-login', async (req, res) => {
   try {
+    // Demo mode gate: can be disabled in production via ENABLE_DEMO_MODE=false
+    if (process.env.NODE_ENV === 'production' && process.env.ENABLE_DEMO_MODE === 'false') {
+      return res.status(403).json({ error: 'Demo sign-in mode is disabled on this platform.' });
+    }
+
     const { role } = req.body;
     if (!VALID_ROLES.includes(role)) {
       return res.status(400).json({ error: `Valid demo roles: ${VALID_ROLES.join(', ')}` });
     }
+
+    // Security audit log for demo persona authentications
+    console.info(`[DEMO AUTH] Demo login initiated for role '${role}' from IP: ${req.ip}`);
 
     const demoAccounts = {
       host:     { name: 'Layla Host',     email: 'host@demo.eg' },
@@ -160,9 +172,15 @@ router.post('/demo-login', async (req, res) => {
 router.patch('/switch-role', verifyToken, async (req, res) => {
   try {
     const { role } = req.body;
+    // Privilege escalation protection: only host, chef, attendee are switchable
     if (!['host', 'chef', 'attendee'].includes(role)) {
       return res.status(400).json({ error: 'Role must be host, chef, or attendee.' });
     }
+    // Admin protection: admins cannot be downgraded through this convenience endpoint
+    if (req.user.role === 'admin') {
+      return res.status(403).json({ error: 'Administrator accounts cannot switch role.' });
+    }
+
     const { rows } = await pool.query(
       `UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name, email, role, created_at, updated_at`,
       [role, req.user.id]

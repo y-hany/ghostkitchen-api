@@ -23,7 +23,8 @@ function verifyToken(req, res, next) {
 
   try {
     // Decoded payload: { id: uuid, role: string, iat, exp }
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    // Explicitly pin algorithm to HS256 to prevent algorithm confusion attacks (e.g. alg: none)
+    req.user = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     next();
   } catch (err) {
     const msg = err.name === 'TokenExpiredError'

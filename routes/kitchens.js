@@ -10,6 +10,7 @@
 const router = require('express').Router();
 const pool   = require('../db/pool');
 const { verifyToken, requireRole } = require('../middleware/auth');
+const { validateUUID, sanitizeText } = require('../middleware/validate');
 
 // ── GET /api/kitchens ─────────────────────────────────────────────────────────
 // Public guests + attendees see only verified kitchens.
@@ -89,7 +90,7 @@ router.get('/mine', verifyToken, requireRole('host'), async (req, res) => {
 });
 
 // ── GET /api/kitchens/:id ──────────────────────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', validateUUID(), async (req, res) => {
   try {
     const { rows: kRows } = await pool.query(
       `SELECT k.*, u.name AS host_name
@@ -101,13 +102,33 @@ router.get('/:id', async (req, res) => {
     if (!kRows.length)
       return res.status(404).json({ error: 'Kitchen not found.' });
 
+    const kitchen = kRows[0];
+
+    // Data protection: unverified/rejected kitchens only accessible to owner host or admin
+    if (kitchen.verification_status !== 'verified') {
+      let isAuthorized = false;
+      const header = (req.headers.authorization || '').replace('Bearer ', '');
+      if (header) {
+        try {
+          const jwt = require('jsonwebtoken');
+          const decoded = jwt.verify(header, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+          if (decoded.role === 'admin' || decoded.id === kitchen.host_id) {
+            isAuthorized = true;
+          }
+        } catch {}
+      }
+      if (!isAuthorized) {
+        return res.status(404).json({ error: 'Kitchen not found.' });
+      }
+    }
+
     const { rows: slots } = await pool.query(
       `SELECT id, start_time, end_time, status, created_at, updated_at
        FROM slots WHERE kitchen_id = $1 ORDER BY start_time`,
       [req.params.id]
     );
 
-    return res.json({ kitchen: kRows[0], slots });
+    return res.json({ kitchen, slots });
   } catch (err) {
     console.error('GET /api/kitchens/:id:', err.message);
     return res.status(500).json({ error: 'Could not fetch kitchen.' });
@@ -119,24 +140,39 @@ router.post('/', verifyToken, requireRole('host'), async (req, res) => {
   try {
     const { name, address, license_info, hourly_rate, equipment } = req.body;
 
-    // Validate
+    // Validate lengths and bounds
     const errors = [];
-    if (!name || String(name).trim().length < 4) errors.push('Kitchen name must be at least 4 characters.');
-    if (!address || String(address).trim().length < 8) errors.push('Full street address and district must be at least 8 characters.');
-    if (!license_info || String(license_info).trim().length < 4) errors.push('MOH commercial permit number is required (min 4 chars).');
+    if (!name || String(name).trim().length < 4 || String(name).length > 120)
+      errors.push('Kitchen name must be between 4 and 120 characters.');
+    if (!address || String(address).trim().length < 8 || String(address).length > 250)
+      errors.push('Full street address and district must be between 8 and 250 characters.');
+    if (!license_info || String(license_info).trim().length < 4 || String(license_info).length > 100)
+      errors.push('MOH commercial permit number is required (4–100 characters).');
+
     const rate = parseFloat(hourly_rate);
-    if (isNaN(rate) || rate < 150) errors.push('Hourly rate must be at least 150 EGP/hour for licensed commercial spaces.');
+    if (isNaN(rate) || rate < 150 || rate > 50000)
+      errors.push('Hourly rate must be between 150 and 50,000 EGP/hour.');
     if (errors.length)
       return res.status(400).json({ error: errors.join(' ') });
 
-    // equipment is an optional array of strings
-    const equip = Array.isArray(equipment) ? equipment.map(String) : [];
+    // Equipment validation and sanitization (max 30 items, each max 80 chars)
+    let equip = [];
+    if (Array.isArray(equipment)) {
+      equip = equipment
+        .slice(0, 30)
+        .map(s => sanitizeText(String(s), 80))
+        .filter(Boolean);
+    }
+
+    const cleanName = sanitizeText(name, 120);
+    const cleanAddr = sanitizeText(address, 250);
+    const cleanLic  = sanitizeText(license_info, 100);
 
     const { rows } = await pool.query(
       `INSERT INTO kitchens (host_id, name, address, license_info, hourly_rate, equipment, verification_status)
        VALUES ($1, $2, $3, $4, $5, $6, 'pending')
        RETURNING *`,
-      [req.user.id, name.trim(), address.trim(), license_info.trim(), rate, equip]
+      [req.user.id, cleanName, cleanAddr, cleanLic, rate, equip]
     );
     return res.status(201).json({ kitchen: rows[0] });
 
@@ -149,18 +185,14 @@ router.post('/', verifyToken, requireRole('host'), async (req, res) => {
 // ── Admin-only status changes ──────────────────────────────────────────────────
 async function setVerification(req, res, status) {
   try {
-    const extra = status === 'verified'
-      ? `, verified_by = $3, verified_at = now()`
-      : `, verified_by = NULL, verified_at = NULL`;
-
-    const params = status === 'verified'
-      ? [status, req.params.id, req.user.id]
-      : [status, req.params.id];
-
     const { rows } = await pool.query(
-      `UPDATE kitchens SET verification_status = $1 ${extra}
-       WHERE id = $2 RETURNING *`,
-      params
+      `UPDATE kitchens
+       SET verification_status = $1,
+           verified_by = CASE WHEN $1 = 'verified' THEN $3::uuid ELSE NULL END,
+           verified_at = CASE WHEN $1 = 'verified' THEN NOW() ELSE NULL END
+       WHERE id = $2
+       RETURNING *`,
+      [status, req.params.id, req.user.id]
     );
     if (!rows.length)
       return res.status(404).json({ error: 'Kitchen not found.' });
@@ -171,8 +203,8 @@ async function setVerification(req, res, status) {
   }
 }
 
-router.patch('/:id/verify',  verifyToken, requireRole('admin'), (req, res) => setVerification(req, res, 'verified'));
-router.patch('/:id/reject',  verifyToken, requireRole('admin'), (req, res) => setVerification(req, res, 'rejected'));
-router.patch('/:id/revoke',  verifyToken, requireRole('admin'), (req, res) => setVerification(req, res, 'pending'));
+router.patch('/:id/verify',  verifyToken, requireRole('admin'), validateUUID(), (req, res) => setVerification(req, res, 'verified'));
+router.patch('/:id/reject',  verifyToken, requireRole('admin'), validateUUID(), (req, res) => setVerification(req, res, 'rejected'));
+router.patch('/:id/revoke',  verifyToken, requireRole('admin'), validateUUID(), (req, res) => setVerification(req, res, 'pending'));
 
 module.exports = router;

@@ -55,14 +55,11 @@ async function test() {
   });
   console.log('✓ 4. Attendee registered:', attendee.user.email);
 
-  // 5. Register Admin
-  const admin = await req('/api/register', 'POST', {
-    name: 'Platform Admin',
-    email: `admin_${tag}@demo.eg`,
-    password: 'password123',
+  // 5. Authenticate Admin (Admin accounts are strictly provisioned, not publicly self-registered)
+  const admin = await req('/api/demo-login', 'POST', {
     role: 'admin'
   });
-  console.log('✓ 5. Admin registered:', admin.user.email);
+  console.log('✓ 5. Admin authenticated:', admin.user.email);
 
   // 6. Host adds a kitchen
   const kRes = await req('/api/kitchens', 'POST', {
@@ -109,7 +106,11 @@ async function test() {
     starts_at: '2026-12-05T18:00:00Z'
   }, chef.token);
   const event = evRes.event;
-  console.log('✓ 11. Event published:', event.title, 'Price:', event.ticket_price, 'EGP');
+  console.log('✓ 11. Event published (pending admin verification):', event.title, 'Price:', event.ticket_price, 'EGP');
+
+  // 11b. Admin verifies the event for public marketplace listing
+  const verifiedEv = await req(`/api/events/${event.id}/verify`, 'PATCH', null, admin.token);
+  console.log('✓ 11b. Event verified by admin:', verifiedEv.event.verification_status);
 
   // 12. Public lists events
   const pubEvents = await req('/api/events');

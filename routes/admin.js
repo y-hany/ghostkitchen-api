@@ -7,6 +7,7 @@
 const router = require('express').Router();
 const pool   = require('../db/pool');
 const { verifyToken, requireRole } = require('../middleware/auth');
+const { validateUUID } = require('../middleware/validate');
 
 // All routes in this file require admin role
 router.use(verifyToken, requireRole('admin'));
@@ -65,7 +66,8 @@ router.get('/stats', async (req, res) => {
 // ?status=all      → every kitchen
 router.get('/kitchens', async (req, res) => {
   try {
-    const filter = req.query.status || 'pending';
+    const rawFilter = String(req.query.status || 'pending').toLowerCase();
+    const filter = ['pending', 'verified', 'rejected', 'all'].includes(rawFilter) ? rawFilter : 'pending';
     let sql = `
       SELECT k.*, u.name AS host_name, u.email AS host_email,
              av.name AS verified_by_name
@@ -92,7 +94,8 @@ router.get('/kitchens', async (req, res) => {
 // ?status=all      → every event
 router.get('/events', async (req, res) => {
   try {
-    const filter = req.query.status || 'pending';
+    const rawFilter = String(req.query.status || 'pending').toLowerCase();
+    const filter = ['pending', 'verified', 'rejected', 'all'].includes(rawFilter) ? rawFilter : 'pending';
     let sql = `
       SELECT e.*,
              b.booking_no, b.status AS booking_status,
@@ -122,7 +125,7 @@ router.get('/events', async (req, res) => {
 });
 
 // ── PATCH /api/admin/events/:id/verify ────────────────────────────────────────
-router.patch('/events/:id/verify', async (req, res) => {
+router.patch('/events/:id/verify', validateUUID(), async (req, res) => {
   try {
     const { rows } = await pool.query(
       `UPDATE events
@@ -140,7 +143,7 @@ router.patch('/events/:id/verify', async (req, res) => {
 });
 
 // ── PATCH /api/admin/events/:id/reject ────────────────────────────────────────
-router.patch('/events/:id/reject', async (req, res) => {
+router.patch('/events/:id/reject', validateUUID(), async (req, res) => {
   try {
     const { rows } = await pool.query(
       `UPDATE events

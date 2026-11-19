@@ -43,7 +43,7 @@ var S, flash = null;
 var $ = (s, r) => [].slice.call((r || document).querySelectorAll(s)), $1 = (s, r) => (r || document).querySelector(s);
 var $$ = s => [].slice.call(document.querySelectorAll(s));
 var fmt = n => Number(n || 0).toLocaleString('en-US') + ' EGP';
-var esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+var esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 var by = (a, id) => a.filter(x => x.id === id)[0];
 
 function formatMenu(desc) {
@@ -139,6 +139,11 @@ async function api(method, path, body) {
       toast('Session expired. Please sign in again.');
       setRoute('#login');
       throw new Error(data.error || 'Session expired');
+    }
+    if (res.status === 429) {
+      var msg = data.error || 'Too many requests. Please wait a few moments before trying again.';
+      toast(msg);
+      throw new Error(msg);
     }
     if (!res.ok) {
       throw new Error(data.error || 'Request failed (' + res.status + ')');
@@ -1733,13 +1738,13 @@ function renderLoginView() {
     <form class="card" novalidate data-form="login">
       <h2>Sign in or Create Account</h2>
       <label>Full Name</label>
-      <input name="name" type="text" value="Nour Hassan" placeholder="e.g. Nour Hassan">
+      <input name="name" type="text" autocomplete="name" placeholder="e.g. Nour Hassan">
 
       <label>Email Address</label>
-      <input name="email" type="email" value="nour@example.com" placeholder="you@example.com">
+      <input name="email" type="email" autocomplete="email" placeholder="you@example.com">
 
       <label>Password</label>
-      <input name="password" type="password" value="password123" placeholder="Choose a secure password">
+      <input name="password" type="password" autocomplete="current-password" placeholder="At least 8 characters">
 
       <label>I am joining primarily as a:</label>
       <div class="seg" style="margin-bottom:16px">

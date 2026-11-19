@@ -7,6 +7,7 @@
 const router = require('express').Router();
 const pool   = require('../db/pool');
 const { verifyToken, requireRole } = require('../middleware/auth');
+const { validateUUID, sanitizeText } = require('../middleware/validate');
 
 // ── GET /api/events/mine ──────────────────────────────────────────────────────
 // Must be declared BEFORE /:id to avoid "mine" being treated as a UUID
@@ -54,7 +55,9 @@ router.get('/', async (req, res) => {
        JOIN kitchens k ON k.id = s.kitchen_id
        JOIN users    u ON u.id = b.chef_id
        LEFT JOIN tickets t ON t.event_id = e.id
-       WHERE b.status = 'approved' AND (e.verification_status = 'verified' OR e.verification_status IS NULL)
+       WHERE b.status = 'approved'
+         AND e.verification_status = 'verified'
+         AND (e.starts_at IS NULL OR e.starts_at > NOW())
        GROUP BY e.id, b.id, s.id, k.id, u.id
        ORDER BY e.starts_at ASC NULLS LAST, e.created_at DESC`
     );
@@ -66,26 +69,30 @@ router.get('/', async (req, res) => {
 });
 
 // ── POST /api/events ──────────────────────────────────────────────────────────
-router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
+router.post('/', verifyToken, requireRole('chef'), validateUUID('booking_id'), async (req, res) => {
   try {
     const { booking_id, title, menu_description, ticket_price, capacity, starts_at } = req.body;
 
     // Validate
     const errors = [];
-    if (!booking_id)                                     errors.push('booking_id is required.');
-    if (!title || String(title).trim().length < 3)       errors.push('title must be at least 3 characters.');
-    if (!menu_description || String(menu_description).trim().length < 5)
-      errors.push('menu_description is required.');
+    if (!booking_id)
+      errors.push('booking_id is required.');
+    if (!title || String(title).trim().length < 3 || String(title).length > 120)
+      errors.push('title must be between 3 and 120 characters.');
+    if (!menu_description || String(menu_description).trim().length < 5 || String(menu_description).length > 2000)
+      errors.push('menu_description must be between 5 and 2000 characters.');
     const price = parseFloat(ticket_price);
-    if (isNaN(price) || price < 0)   errors.push('ticket_price must be 0 or more.');
+    if (isNaN(price) || price < 0 || price > 50000)
+      errors.push('ticket_price must be between 0 and 50,000 EGP.');
     const cap = parseInt(capacity, 10);
-    if (isNaN(cap) || cap < 1)        errors.push('capacity must be at least 1.');
+    if (isNaN(cap) || cap < 1 || cap > 500)
+      errors.push('capacity must be between 1 and 500 seats.');
     if (errors.length)
       return res.status(400).json({ error: errors.join(' ') });
 
     // Booking must belong to this chef
     const { rows: bRows } = await pool.query(
-      `SELECT b.id, b.chef_id, b.status, s.start_time
+      `SELECT b.id, b.chef_id, b.status, s.start_time, s.end_time
        FROM bookings b
        JOIN slots s ON s.id = b.slot_id
        WHERE b.id = $1`,
@@ -112,16 +119,23 @@ router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
       const d = new Date(starts_at);
       if (isNaN(d.getTime()))
         return res.status(400).json({ error: 'starts_at is not a valid date.' });
+      if (d <= new Date())
+        return res.status(400).json({ error: 'starts_at must be in the future.' });
       startsAt = d.toISOString();
     } else if (bRows[0].start_time) {
+      if (new Date(bRows[0].start_time) <= new Date())
+        return res.status(400).json({ error: 'The kitchen shift slot for this booking has already passed.' });
       startsAt = new Date(bRows[0].start_time).toISOString();
     }
+
+    const cleanTitle = sanitizeText(title, 120);
+    const cleanMenu  = sanitizeText(menu_description, 2000);
 
     const { rows } = await pool.query(
       `INSERT INTO events (booking_id, title, menu_description, ticket_price, capacity, starts_at, verification_status)
        VALUES ($1, $2, $3, $4, $5, $6, 'pending')
        RETURNING *`,
-      [booking_id, title.trim(), menu_description.trim(), price, cap, startsAt]
+      [booking_id, cleanTitle, cleanMenu, price, cap, startsAt]
     );
     return res.status(201).json({ event: rows[0] });
 
@@ -136,7 +150,7 @@ router.post('/', verifyToken, requireRole('chef'), async (req, res) => {
 
 // ── GET /api/events/:id/manifest ───────────────────────────────────────────
 // Hosting chef views registered diner manifest with dietary notes and door check-in status
-router.get('/:id/manifest', verifyToken, async (req, res) => {
+router.get('/:id/manifest', verifyToken, validateUUID(), async (req, res) => {
   try {
     const { rows: eRows } = await pool.query(
       `SELECT e.id, e.title, b.chef_id
@@ -167,7 +181,7 @@ router.get('/:id/manifest', verifyToken, async (req, res) => {
 });
 
 // ── PATCH /api/events/:id/verify ───────────────────────────────────────────
-router.patch('/:id/verify', verifyToken, requireRole('admin'), async (req, res) => {
+router.patch('/:id/verify', verifyToken, requireRole('admin'), validateUUID(), async (req, res) => {
   try {
     const { rows } = await pool.query(
       `UPDATE events
@@ -185,7 +199,7 @@ router.patch('/:id/verify', verifyToken, requireRole('admin'), async (req, res) 
 });
 
 // ── PATCH /api/events/:id/reject ───────────────────────────────────────────
-router.patch('/:id/reject', verifyToken, requireRole('admin'), async (req, res) => {
+router.patch('/:id/reject', verifyToken, requireRole('admin'), validateUUID(), async (req, res) => {
   try {
     const { rows } = await pool.query(
       `UPDATE events

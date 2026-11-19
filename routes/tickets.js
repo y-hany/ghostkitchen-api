@@ -7,6 +7,7 @@
 const router = require('express').Router();
 const pool   = require('../db/pool');
 const { verifyToken, requireRole } = require('../middleware/auth');
+const { validateUUID, sanitizeText } = require('../middleware/validate');
 
 // ── GET /api/tickets ──────────────────────────────────────────────────────────
 // Returns everything tickets.html needs in one query:
@@ -53,7 +54,7 @@ router.get('/', verifyToken, async (req, res) => {
 // The DB trigger (trg_tickets_before_write) handles:
 //   - setting unit_price from events.ticket_price
 //   - capacity check (raises exception if sold out)
-router.post('/', verifyToken, requireRole('attendee'), async (req, res) => {
+router.post('/', verifyToken, requireRole('attendee', 'chef', 'host'), validateUUID('event_id'), async (req, res) => {
   const client = await pool.connect();
   try {
     const { event_id, quantity, dietary_notes } = req.body;
@@ -62,14 +63,16 @@ router.post('/', verifyToken, requireRole('attendee'), async (req, res) => {
     const errors = [];
     if (!event_id) errors.push('event_id is required.');
     const qty = parseInt(quantity, 10);
-    if (isNaN(qty) || qty < 1) errors.push('quantity must be at least 1.');
+    if (isNaN(qty) || qty < 1 || qty > 10)
+      errors.push('quantity must be between 1 and 10 seats per booking.');
     if (errors.length) return res.status(400).json({ error: errors.join(' ') });
 
     await client.query('BEGIN');
 
-    // Event must exist and its booking must be approved (FOR UPDATE lock)
+    // Event must exist, be verified, and its booking must be approved (FOR UPDATE lock)
     const { rows: evRows } = await client.query(
-      `SELECT e.id, e.capacity, e.ticket_price, b.status AS booking_status
+      `SELECT e.id, e.capacity, e.ticket_price, e.starts_at, e.verification_status,
+              b.status AS booking_status, b.chef_id
        FROM events e
        JOIN bookings b ON b.id = e.booking_id
        WHERE e.id = $1
@@ -80,12 +83,25 @@ router.post('/', verifyToken, requireRole('attendee'), async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Event not found.' });
     }
-    if (evRows[0].booking_status !== 'approved') {
+    const ev = evRows[0];
+    if (ev.verification_status !== 'verified') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'This supper club has not been approved by platform administration.' });
+    }
+    if (ev.booking_status !== 'approved') {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: 'That event is not yet live (booking not approved).' });
     }
+    if (ev.starts_at && new Date(ev.starts_at) <= new Date()) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Cannot purchase tickets for an event that has already passed.' });
+    }
+    if (ev.chef_id === req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Chefs cannot purchase tickets to their own hosted supper clubs.' });
+    }
 
-    const cleanNotes = dietary_notes ? String(dietary_notes).trim().slice(0, 300) : null;
+    const cleanNotes = dietary_notes ? sanitizeText(String(dietary_notes), 300) : null;
 
     // Insert — the DB trigger fills unit_price and enforces capacity
     const { rows } = await client.query(
@@ -111,7 +127,7 @@ router.post('/', verifyToken, requireRole('attendee'), async (req, res) => {
 });
 
 // ── PATCH /api/tickets/:id/checkin ───────────────────────────────────────────
-router.patch('/:id/checkin', verifyToken, async (req, res) => {
+router.patch('/:id/checkin', verifyToken, validateUUID(), async (req, res) => {
   try {
     const { rows: tRows } = await pool.query(
       `SELECT t.id, t.checked_in, b.chef_id
@@ -129,7 +145,7 @@ router.patch('/:id/checkin', verifyToken, async (req, res) => {
     const nextState = !tRows[0].checked_in;
     const { rows } = await pool.query(
       `UPDATE tickets
-       SET checked_in = $1, checked_in_at = ${nextState ? 'NOW()' : 'NULL'}
+       SET checked_in = $1, checked_in_at = CASE WHEN $1 = true THEN NOW() ELSE NULL END
        WHERE id = $2
        RETURNING *`,
       [nextState, req.params.id]
@@ -140,5 +156,7 @@ router.patch('/:id/checkin', verifyToken, async (req, res) => {
     return res.status(500).json({ error: 'Could not update door check-in.' });
   }
 });
+
+module.exports = router;
 
 module.exports = router;
