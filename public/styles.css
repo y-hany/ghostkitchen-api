@@ -2821,6 +2821,193 @@ button:active:not(:disabled),
   display: block;
 }
 
+/* ── WELCOME / ONBOARDING MODAL ──────────────────────────────────────────── */
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: wOverlayIn .25s ease both;
+}
+.welcome-overlay.hidden { display: none !important; }
+
+@keyframes wOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.welcome-card {
+  background: var(--card, #fff);
+  color: var(--text, #1a1a1a);
+  border-radius: 20px;
+  padding: 36px 32px 28px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+  text-align: center;
+  animation: wCardIn .3s cubic-bezier(.34,1.56,.64,1) both;
+  max-height: 90vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@keyframes wCardIn {
+  from { opacity: 0; transform: scale(.9) translateY(16px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.welcome-logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: var(--accent, #b84324);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  box-shadow: 0 6px 20px rgba(184,67,36,.35);
+}
+
+.welcome-title {
+  font-size: 1.45rem;
+  font-weight: 800;
+  margin: 0 0 4px;
+  letter-spacing: -.3px;
+}
+
+.welcome-sub {
+  font-size: .84rem;
+  color: var(--muted, #666);
+  margin: 0 0 20px;
+  line-height: 1.4;
+}
+
+.welcome-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+}
+
+.welcome-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 14px;
+  border: 1.5px solid var(--line, #ddd);
+  border-radius: 10px;
+  font-size: .93rem;
+  background: var(--bg, #f9f9f9);
+  color: var(--text, #1a1a1a);
+  transition: border-color .2s;
+  outline: none;
+}
+.welcome-field input:focus {
+  border-color: var(--accent, #b84324);
+}
+
+.welcome-err {
+  font-size: .82rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(220,38,38,.08);
+  border: 1px solid rgba(220,38,38,.2);
+  color: #dc2626;
+  text-align: left;
+}
+
+.welcome-submit {
+  width: 100%;
+  padding: 12px;
+  font-size: .95rem;
+  font-weight: 700;
+  border-radius: 10px;
+  margin-top: 2px;
+}
+
+.welcome-register-btn {
+  width: 100%;
+  padding: 10px;
+  font-size: .88rem;
+  border-radius: 10px;
+  color: var(--muted, #666);
+  border: 1.5px solid var(--line, #ddd);
+  background: transparent;
+}
+.welcome-register-btn:hover {
+  background: var(--bg, #f9f9f9);
+  border-color: var(--accent, #b84324);
+  color: var(--accent, #b84324);
+}
+
+.welcome-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 14px;
+  color: var(--muted, #999);
+  font-size: .78rem;
+  font-weight: 600;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+.welcome-divider::before,
+.welcome-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line, #ddd);
+}
+
+.welcome-demo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.welcome-demo-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 4px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line, #e0e0e0);
+  background: var(--bg, #f8f8f8);
+  cursor: pointer;
+  transition: all .18s;
+  min-width: 0;
+}
+.welcome-demo-btn:hover {
+  border-color: var(--accent, #b84324);
+  background: rgba(184,67,36,.06);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(184,67,36,.15);
+}
+.welcome-demo-btn:active { transform: translateY(0); }
+
+.demo-emoji { font-size: 1.3rem; line-height: 1; }
+.demo-label { font-size: .72rem; font-weight: 600; color: var(--text, #333); }
+
+/* Loading state on demo buttons */
+.welcome-demo-btn.loading { opacity: .6; pointer-events: none; }
+
+/* Responsive: on small phones, card goes full-width, 2-col demo grid */
+@media (max-width: 440px) {
+  .welcome-card { padding: 28px 18px 22px; border-radius: 16px; }
+  .welcome-title { font-size: 1.25rem; }
+  .welcome-demo-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .welcome-demo-btn { padding: 12px 6px; }
+  .demo-emoji { font-size: 1.5rem; }
+  .demo-label { font-size: .75rem; }
+}
+
 /* 9. Print Stylesheet for Passes */
 @media print {
   nav, #topNav, #bottomNav, #demoDrawer, .nav-actions, .theme-btn, .links,

@@ -2516,6 +2516,92 @@ document.addEventListener('change', e => {
   }
 });
 
+// ── WELCOME MODAL ───────────────────────────────────────────────────────────
+function initWelcomeModal() {
+  var modal = document.getElementById('welcomeModal');
+  if (!modal) return;
+
+  // Only show when there is no active session
+  if (S.session) {
+    modal.classList.add('hidden');
+    return;
+  }
+  modal.classList.remove('hidden');
+
+  // ── Sign-in form submission
+  modal.addEventListener('submit', async function(e) {
+    var f = e.target;
+    if (f.dataset.form !== 'welcome-login') return;
+    e.preventDefault();
+
+    var email = f.email.value.trim();
+    var password = f.password.value;
+    var errEl = f.querySelector('.welcome-err');
+    var subBtn = f.querySelector('.welcome-submit');
+
+    if (!email) { showWelcomeErr(errEl, 'Please enter your email.'); return; }
+    if (!password) { showWelcomeErr(errEl, 'Please enter your password.'); return; }
+
+    subBtn.disabled = true;
+    subBtn.textContent = 'Signing in…';
+    errEl.hidden = true;
+
+    try {
+      await loginOrRegister(null, email, password, 'attendee');
+      modal.classList.add('hidden');
+    } catch (err) {
+      showWelcomeErr(errEl, err.message || 'Sign in failed. Check your credentials.');
+    } finally {
+      subBtn.disabled = false;
+      subBtn.textContent = 'Sign In';
+    }
+  });
+
+  // ── Click handlers (demo personas + register link)
+  modal.addEventListener('click', async function(e) {
+    var btn = e.target.closest('[data-act]');
+    if (!btn) return;
+    var act = btn.dataset.act;
+
+    // "Create Account" → navigate to full register/login page & close modal
+    if (act === 'welcome-register') {
+      modal.classList.add('hidden');
+      setRoute('#login');
+      return;
+    }
+
+    // Demo persona buttons
+    if (act === 'welcome-demo') {
+      var dRole = btn.dataset.role;
+      var d = DEMO_USERS[dRole];
+      if (!d) return;
+
+      btn.classList.add('loading');
+      btn.querySelector('.demo-label').textContent = '…';
+
+      try {
+        var res = await api('POST', '/demo-login', { role: dRole });
+        localStorage.setItem('gk_token', res.token);
+        S.session = res.user;
+        saveSession();
+        updateNav();
+        modal.classList.add('hidden');
+        toast('Welcome, ' + res.user.name + '! Exploring as ' + d.role + '.');
+        redirectAfterAuth(res.user.role);
+      } catch (err) {
+        toast('Demo login failed: ' + err.message, 'err');
+        btn.classList.remove('loading');
+        btn.querySelector('.demo-label').textContent = d.role.charAt(0).toUpperCase() + d.role.slice(1);
+      }
+    }
+  });
+}
+
+function showWelcomeErr(el, msg) {
+  el.textContent = msg;
+  el.hidden = false;
+}
+
 // ── INITIALIZE ──────────────────────────────────────────────────────────────
 initSession();
 initTheme();
@@ -2523,5 +2609,6 @@ window.addEventListener('hashchange', route);
 window.addEventListener('popstate', route);
 window.addEventListener('storage', () => { initSession(); route(); });
 route();
+initWelcomeModal();
 
 })();

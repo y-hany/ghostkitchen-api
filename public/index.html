@@ -94,6 +94,60 @@
   <!-- Dedicated Mobile Bottom Navigation (Outside topNav containing block!) -->
   <nav id="bottomNav" class="mobile-bottom-nav"></nav>
 
+  <!-- Welcome / Onboarding Modal -->
+  <div id="welcomeModal" class="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
+    <div class="welcome-card">
+      <!-- Logo -->
+      <div class="welcome-logo">
+        <svg viewBox="0 0 24 24" width="38" height="38" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
+          <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
+          <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
+          <path d="M18 8a6 6 0 1 1-12 0"/>
+          <path d="M12 18v4"/><path d="M8 22h8"/>
+        </svg>
+      </div>
+      <h2 id="welcomeTitle" class="welcome-title">GhostKitchen Cairo</h2>
+      <p class="welcome-sub">Egypt's first licensed ghost kitchen &amp; supper club platform</p>
+
+      <!-- Sign In Form -->
+      <form class="welcome-form" data-form="welcome-login" novalidate>
+        <div class="welcome-field">
+          <input name="email" type="email" autocomplete="email" placeholder="Email address" required>
+        </div>
+        <div class="welcome-field">
+          <input name="password" type="password" autocomplete="current-password" placeholder="Password" required>
+        </div>
+        <div class="msg err welcome-err" role="alert" hidden></div>
+        <button type="submit" class="btn btn-primary welcome-submit">Sign In</button>
+        <button type="button" class="btn btn-ghost welcome-register-btn" data-act="welcome-register">Create Account</button>
+      </form>
+
+      <!-- OR Divider -->
+      <div class="welcome-divider"><span>or explore as demo</span></div>
+
+      <!-- Demo Persona Buttons -->
+      <div class="welcome-demo-grid">
+        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="attendee">
+          <span class="demo-emoji">🍽️</span>
+          <span class="demo-label">Diner</span>
+        </button>
+        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="chef">
+          <span class="demo-emoji">👨‍🍳</span>
+          <span class="demo-label">Chef</span>
+        </button>
+        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="host">
+          <span class="demo-emoji">🏠</span>
+          <span class="demo-label">Host</span>
+        </button>
+        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="admin">
+          <span class="demo-emoji">⚙️</span>
+          <span class="demo-label">Admin</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- App Script -->
   <script src="app.js"></script>
 </body>
