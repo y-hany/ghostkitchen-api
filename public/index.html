@@ -110,37 +110,79 @@
       <h2 id="welcomeTitle" class="welcome-title">GhostKitchen Cairo</h2>
       <p class="welcome-sub">Egypt's first licensed ghost kitchen &amp; supper club platform</p>
 
+      <!-- Auth Mode Tabs -->
+      <div class="welcome-tabs">
+        <button type="button" class="welcome-tab active" data-auth-tab="login">Sign In</button>
+        <button type="button" class="welcome-tab" data-auth-tab="register">Create Account</button>
+      </div>
+
       <!-- Sign In Form -->
-      <form class="welcome-form" data-form="welcome-login" novalidate>
+      <form class="welcome-form" id="welcomeLoginForm" data-form="welcome-login" novalidate>
         <div class="welcome-field">
-          <input name="email" type="email" autocomplete="email" placeholder="Email address" required>
+          <label class="welcome-field-label">Email</label>
+          <input name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
         </div>
         <div class="welcome-field">
+          <label class="welcome-field-label">Password</label>
           <input name="password" type="password" autocomplete="current-password" placeholder="Password" required>
         </div>
         <div class="msg err welcome-err" role="alert" hidden></div>
         <button type="submit" class="btn btn-primary welcome-submit">Sign In</button>
-        <button type="button" class="btn btn-ghost welcome-register-btn" data-act="welcome-register">Create Account</button>
+      </form>
+
+      <!-- Register Form -->
+      <form class="welcome-form" id="welcomeRegisterForm" data-form="welcome-register" novalidate hidden>
+        <div class="welcome-field">
+          <label class="welcome-field-label">Full Name</label>
+          <input name="name" type="text" autocomplete="name" placeholder="e.g. Layla Hassan" required>
+        </div>
+        <div class="welcome-field">
+          <label class="welcome-field-label">Email</label>
+          <input name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
+        </div>
+        <div class="welcome-field">
+          <label class="welcome-field-label">Password (min 8 chars)</label>
+          <input name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" required>
+        </div>
+        <div class="welcome-field">
+          <label class="welcome-field-label">I am joining primarily as:</label>
+          <div class="welcome-role-picker">
+            <label class="welcome-role-opt">
+              <input type="radio" name="welcomeRole" value="attendee" checked>
+              <span>🍽️ Diner</span>
+            </label>
+            <label class="welcome-role-opt">
+              <input type="radio" name="welcomeRole" value="chef">
+              <span>👨‍🍳 Chef</span>
+            </label>
+            <label class="welcome-role-opt">
+              <input type="radio" name="welcomeRole" value="host">
+              <span>🏠 Host</span>
+            </label>
+          </div>
+        </div>
+        <div class="msg err welcome-err" role="alert" hidden></div>
+        <button type="submit" class="btn btn-primary welcome-submit">Create Account</button>
       </form>
 
       <!-- OR Divider -->
-      <div class="welcome-divider"><span>or explore as demo</span></div>
+      <div class="welcome-divider"><span>or 1-click demo tester</span></div>
 
       <!-- Demo Persona Buttons -->
       <div class="welcome-demo-grid">
-        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="attendee">
+        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="attendee" title="Instant Sign In as Diner Mariam">
           <span class="demo-emoji">🍽️</span>
           <span class="demo-label">Diner</span>
         </button>
-        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="chef">
+        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="chef" title="Instant Sign In as Chef Omar">
           <span class="demo-emoji">👨‍🍳</span>
           <span class="demo-label">Chef</span>
         </button>
-        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="host">
+        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="host" title="Instant Sign In as Host Layla">
           <span class="demo-emoji">🏠</span>
           <span class="demo-label">Host</span>
         </button>
-        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="admin">
+        <button type="button" class="welcome-demo-btn" data-act="welcome-demo" data-role="admin" title="Instant Sign In as Platform Admin">
           <span class="demo-emoji">⚙️</span>
           <span class="demo-label">Admin</span>
         </button>

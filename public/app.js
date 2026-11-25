@@ -133,13 +133,16 @@ async function api(method, path, body) {
     });
     var data = await res.json().catch(() => ({}));
     if (res.status === 401) {
-      localStorage.removeItem('gk_token');
-      localStorage.removeItem(K);
-      if (S) S.session = null;
-      updateNav();
-      toast('Session expired. Please sign in again.');
-      setRoute('#login');
-      throw new Error(data.error || 'Session expired');
+      var isAuthEndpoint = path === '/login' || path === '/register' || path === '/demo-login';
+      if (!isAuthEndpoint) {
+        localStorage.removeItem('gk_token');
+        localStorage.removeItem(K);
+        if (S) S.session = null;
+        updateNav();
+        toast('Session expired. Please sign in again.');
+        setRoute('#login');
+      }
+      throw new Error(data.error || 'Invalid credentials or session expired.');
     }
     if (res.status === 429) {
       var msg = data.error || 'Too many requests. Please wait a few moments before trying again.';
@@ -162,8 +165,10 @@ async function api(method, path, body) {
 function initSession() {
   var saved = null;
   try { saved = JSON.parse(localStorage.getItem(K)); } catch(e){}
+  var token = localStorage.getItem('gk_token');
+  var validSession = (token && saved && saved.session) ? saved.session : null;
   S = {
-    session: saved && saved.session ? saved.session : null,
+    session: validSession,
     filters: [],
     district: 'All',
     setup: 'All Setups',
@@ -176,6 +181,21 @@ function initSession() {
     tickets: [],
     stats: null
   };
+}
+
+async function verifyTokenOnStartup() {
+  var token = localStorage.getItem('gk_token');
+  if (!token) return;
+  try {
+    var res = await api('GET', '/me');
+    if (res && res.user) {
+      S.session = res.user;
+      saveSession();
+      updateNav();
+    }
+  } catch (err) {
+    // Session expired or invalid; api() cleared state
+  }
 }
 
 function saveSession() {
@@ -1982,41 +2002,88 @@ function renderLoginView() {
   var view = $1('#appView');
   view.innerHTML = `
     <div class="hero">
-      <h1>Join GhostKitchen & Supper Club</h1>
+      <h1>Account &amp; Security Portal</h1>
       <p>Connect with Cairo's culinary creators, commercial kitchen network, and secret supper clubs.</p>
     </div>
 
     ${S.session ? `
-      <div class="card row" style="margin-bottom:20px">
+      <div class="card row" style="margin-bottom:20px; align-items:center; justify-content:space-between;">
         <div>
-          <div class="muted">Currently signed in as</div>
-          <b style="font-size:17px">${esc(me())}</b> ${B('approved', role())}
+          <div class="muted" style="font-size:12px; font-weight:700;">CURRENTLY SIGNED IN AS</div>
+          <b style="font-size:18px;">${esc(me())}</b> ${B('approved', role())}
+          <div class="muted" style="font-size:12px; margin-top:2px;">Email: ${esc(S.session.email || '')}</div>
         </div>
         <button class="logout-btn" data-act="logout">Sign out</button>
       </div>
     ` : ''}
 
-    <form class="card" novalidate data-form="login">
-      <h2>Sign in or Create Account</h2>
-      <label>Full Name</label>
-      <input name="name" type="text" autocomplete="name" placeholder="e.g. Nour Hassan">
-
-      <label>Email Address</label>
-      <input name="email" type="email" autocomplete="email" placeholder="you@example.com">
-
-      <label>Password</label>
-      <input name="password" type="password" autocomplete="current-password" placeholder="At least 8 characters">
-
-      <label>I am joining primarily as a:</label>
-      <div class="seg" style="margin-bottom:16px">
-        <label><input type="radio" name="role" value="attendee" checked><span>Dinner Guest</span></label>
-        <label><input type="radio" name="role" value="chef"><span>Guest Chef</span></label>
-        <label><input type="radio" name="role" value="host"><span>Kitchen Host</span></label>
+    <div class="card" style="max-width:480px; margin:0 auto; padding:28px 22px;">
+      <!-- Toggle Tabs -->
+      <div class="auth-tabs" id="pageAuthTabs">
+        <button type="button" class="auth-tab active" data-act="switch-page-auth" data-mode="login">Sign In</button>
+        <button type="button" class="auth-tab" data-act="switch-page-auth" data-mode="register">Create Account</button>
       </div>
 
-      <div class="msg err" role="alert" hidden></div>
-      <button type="submit" style="width:100%">Continue</button>
-    </form>
+      <!-- Sign In Form -->
+      <form novalidate data-form="page-login" id="pageLoginForm">
+        <h2 style="font-size:19px; margin-bottom:4px;">Sign in to your account</h2>
+        <p class="muted" style="font-size:13px; margin-bottom:16px;">Access your supper club passes, kitchen shift bookings, or hosting dashboard.</p>
+
+        <label class="auth-field-label">Email Address</label>
+        <input name="email" type="email" autocomplete="email" placeholder="you@example.com" required style="margin-bottom:12px;">
+
+        <label class="auth-field-label">Password</label>
+        <input name="password" type="password" autocomplete="current-password" placeholder="••••••••" required style="margin-bottom:14px;">
+
+        <div class="msg err" role="alert" hidden></div>
+        <button type="submit" class="btn btn-primary" style="width:100%; min-height:46px; font-size:15px; font-weight:700;">Sign In</button>
+
+        <!-- Quick 1-click Demo Accounts Filler -->
+        <div class="login-quick-demo-bar">
+          <div class="login-quick-demo-title">Or 1-click fill demo credentials:</div>
+          <div class="login-quick-demo-btns">
+            <button type="button" class="quick-demo-chip" data-act="fill-demo" data-email="attendee@demo.eg" data-pw="password123" title="Fill Diner Mariam">🍽️ Diner</button>
+            <button type="button" class="quick-demo-chip" data-act="fill-demo" data-email="chef@demo.eg" data-pw="password123" title="Fill Chef Omar">👨‍🍳 Chef</button>
+            <button type="button" class="quick-demo-chip" data-act="fill-demo" data-email="host@demo.eg" data-pw="password123" title="Fill Host Layla">🏠 Host</button>
+            <button type="button" class="quick-demo-chip" data-act="fill-demo" data-email="admin@demo.eg" data-pw="password123" title="Fill Platform Admin">⚙️ Admin</button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form novalidate data-form="page-register" id="pageRegisterForm" hidden>
+        <h2 style="font-size:19px; margin-bottom:4px;">Create a new account</h2>
+        <p class="muted" style="font-size:13px; margin-bottom:16px;">Join Egypt's official shared culinary marketplace.</p>
+
+        <label class="auth-field-label">Full Name</label>
+        <input name="name" type="text" autocomplete="name" placeholder="e.g. Layla Hassan" required style="margin-bottom:12px;">
+
+        <label class="auth-field-label">Email Address</label>
+        <input name="email" type="email" autocomplete="email" placeholder="you@example.com" required style="margin-bottom:12px;">
+
+        <label class="auth-field-label">Password (min 8 characters)</label>
+        <input name="password" type="password" autocomplete="new-password" placeholder="At least 8 characters" required style="margin-bottom:14px;">
+
+        <label class="auth-field-label">I am joining primarily as a:</label>
+        <div class="auth-role-picker" style="margin-bottom:16px;">
+          <label class="auth-role-opt">
+            <input type="radio" name="role" value="attendee" checked>
+            <span>🍽️ Diner</span>
+          </label>
+          <label class="auth-role-opt">
+            <input type="radio" name="role" value="chef">
+            <span>👨‍🍳 Chef</span>
+          </label>
+          <label class="auth-role-opt">
+            <input type="radio" name="role" value="host">
+            <span>🏠 Host</span>
+          </label>
+        </div>
+
+        <div class="msg err" role="alert" hidden></div>
+        <button type="submit" class="btn btn-primary" style="width:100%; min-height:46px; font-size:15px; font-weight:700;">Create Account</button>
+      </form>
+    </div>
   `;
 }
 
@@ -2107,37 +2174,61 @@ function route() {
 }
 
 // ── AUTHENTICATION ──────────────────────────────────────────────────────────
+async function loginUser(email, password) {
+  if (!email || !email.trim()) throw new Error('Please enter your email address.');
+  if (!password) throw new Error('Please enter your password.');
+
+  var cleanEmail = email.trim().toLowerCase();
+  var data = await api('POST', '/login', { email: cleanEmail, password: password });
+
+  localStorage.setItem('gk_token', data.token);
+  S.session = data.user;
+  saveSession();
+  updateNav();
+  toast('Welcome back, ' + data.user.name + '!');
+
+  var modal = document.getElementById('welcomeModal');
+  if (modal) modal.classList.add('hidden');
+
+  redirectAfterAuth(data.user.role);
+  return data.user;
+}
+
+async function registerUser(name, email, password, role) {
+  if (!name || name.trim().length < 2) throw new Error('Full name must be at least 2 characters.');
+  if (!email || !email.trim()) throw new Error('Please enter your email address.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) throw new Error('Please enter a valid email address.');
+  if (!password || password.length < 8) throw new Error('Password must be at least 8 characters.');
+
+  var cleanEmail = email.trim().toLowerCase();
+  var cleanName = name.trim();
+  var r = role || 'attendee';
+
+  var data = await api('POST', '/register', {
+    name: cleanName,
+    email: cleanEmail,
+    password: password,
+    role: r
+  });
+
+  localStorage.setItem('gk_token', data.token);
+  S.session = data.user;
+  saveSession();
+  updateNav();
+  toast('Account created! Signed in as ' + data.user.name);
+
+  var modal = document.getElementById('welcomeModal');
+  if (modal) modal.classList.add('hidden');
+
+  redirectAfterAuth(data.user.role);
+  return data.user;
+}
+
 async function loginOrRegister(name, email, password, r) {
-  try {
-    var data = await api('POST', '/login', { email: email, password: password });
-    localStorage.setItem('gk_token', data.token);
-    S.session = data.user;
-    saveSession();
-    toast('Welcome back, ' + data.user.name + '!');
-    redirectAfterAuth(data.user.role);
-  } catch (err) {
-    if (err.message.indexOf('Invalid email') > -1 || err.message.indexOf('not found') > -1) {
-      try {
-        var regData = await api('POST', '/register', {
-          name: name || email.split('@')[0],
-          email: email,
-          password: password,
-          role: r
-        });
-        localStorage.setItem('gk_token', regData.token);
-        S.session = regData.user;
-        saveSession();
-        toast('Account created! Signed in as ' + regData.user.name);
-        redirectAfterAuth(regData.user.role);
-        return;
-      } catch (regErr) {
-        toast('Registration error: ' + regErr.message);
-        throw regErr;
-      }
-    }
-    toast('Sign in failed: ' + err.message);
-    throw err;
+  if (name && name.trim()) {
+    return registerUser(name, email, password, r);
   }
+  return loginUser(email, password);
 }
 
 function redirectAfterAuth(r) {
@@ -2181,6 +2272,37 @@ document.addEventListener('click', async e => {
       d.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
     toast('Tester mode active! Pick a persona to explore.');
+    return;
+  }
+
+  // Switch auth mode on #login page
+  if (e.target.closest('[data-act="switch-page-auth"]')) {
+    e.preventDefault();
+    var authBtn = e.target.closest('[data-act="switch-page-auth"]');
+    var authMode = authBtn.dataset.mode;
+    document.querySelectorAll('[data-act="switch-page-auth"]').forEach(b => b.classList.toggle('active', b === authBtn));
+    var loginF = document.getElementById('pageLoginForm');
+    var regF = document.getElementById('pageRegisterForm');
+    if (authMode === 'register') {
+      if (loginF) loginF.hidden = true;
+      if (regF) regF.hidden = false;
+    } else {
+      if (loginF) loginF.hidden = false;
+      if (regF) regF.hidden = true;
+    }
+    return;
+  }
+
+  // 1-click fill demo credentials on #login page
+  if (e.target.closest('[data-act="fill-demo"]')) {
+    e.preventDefault();
+    var demoBtn = e.target.closest('[data-act="fill-demo"]');
+    var form = document.getElementById('pageLoginForm');
+    if (form) {
+      form.email.value = demoBtn.dataset.email;
+      form.password.value = demoBtn.dataset.pw;
+      toast('Loaded demo credentials for ' + demoBtn.dataset.email.split('@')[0] + '. Click Sign In!');
+    }
     return;
   }
 
@@ -2654,11 +2776,17 @@ document.addEventListener('submit', async e => {
   var t = f.dataset.form, x = f.elements, v = n => (x[n] ? x[n].value.trim() : '');
 
   try {
-    if (t === 'login') {
+    if (t === 'login' || t === 'page-login') {
       if (!v('email')) return fail(f, 'Please enter your email.', x.email);
       if (!v('password')) return fail(f, 'Please enter your password.', x.password);
+      await loginUser(v('email'), v('password'));
+    }
+    else if (t === 'page-register') {
+      if (!v('name') || v('name').length < 2) return fail(f, 'Please enter your full name (min 2 characters).', x.name);
+      if (!v('email')) return fail(f, 'Please enter your email.', x.email);
+      if (!v('password') || v('password').length < 8) return fail(f, 'Password must be at least 8 characters.', x.password);
       var r = f.querySelector('input[name="role"]:checked')?.value || 'attendee';
-      await loginOrRegister(v('name'), v('email'), v('password'), r);
+      await registerUser(v('name'), v('email'), v('password'), r);
     }
     else if (t === 'kitchen') {
       if (!v('name') || v('name').length < 4) return fail(f, 'Kitchen name must be at least 4 characters.', x.name);
@@ -2802,47 +2930,85 @@ function initWelcomeModal() {
   }
   modal.classList.remove('hidden');
 
-  // ── Sign-in form submission
+  // Handle Tab Switch (Sign In vs Create Account)
+  modal.querySelectorAll('.welcome-tab').forEach(tab => {
+    tab.addEventListener('click', function() {
+      var mode = this.dataset.authTab;
+      modal.querySelectorAll('.welcome-tab').forEach(t => t.classList.toggle('active', t === this));
+      var loginF = document.getElementById('welcomeLoginForm');
+      var regF = document.getElementById('welcomeRegisterForm');
+      if (mode === 'register') {
+        if (loginF) loginF.hidden = true;
+        if (regF) regF.hidden = false;
+      } else {
+        if (loginF) loginF.hidden = false;
+        if (regF) regF.hidden = true;
+      }
+    });
+  });
+
+  // Sign-in and Register form submission
   modal.addEventListener('submit', async function(e) {
     var f = e.target;
-    if (f.dataset.form !== 'welcome-login') return;
+    var t = f.dataset.form;
+    if (t !== 'welcome-login' && t !== 'welcome-register') return;
     e.preventDefault();
 
-    var email = f.email.value.trim();
-    var password = f.password.value;
     var errEl = f.querySelector('.welcome-err');
     var subBtn = f.querySelector('.welcome-submit');
 
-    if (!email) { showWelcomeErr(errEl, 'Please enter your email.'); return; }
-    if (!password) { showWelcomeErr(errEl, 'Please enter your password.'); return; }
+    if (t === 'welcome-login') {
+      var email = f.email.value.trim();
+      var password = f.password.value;
 
-    subBtn.disabled = true;
-    subBtn.textContent = 'Signing in…';
-    errEl.hidden = true;
+      if (!email) { showWelcomeErr(errEl, 'Please enter your email.'); return; }
+      if (!password) { showWelcomeErr(errEl, 'Please enter your password.'); return; }
 
-    try {
-      await loginOrRegister(null, email, password, 'attendee');
-      modal.classList.add('hidden');
-    } catch (err) {
-      showWelcomeErr(errEl, err.message || 'Sign in failed. Check your credentials.');
-    } finally {
-      subBtn.disabled = false;
-      subBtn.textContent = 'Sign In';
+      subBtn.disabled = true;
+      subBtn.textContent = 'Signing in…';
+      errEl.hidden = true;
+
+      try {
+        await loginUser(email, password);
+        modal.classList.add('hidden');
+      } catch (err) {
+        showWelcomeErr(errEl, err.message || 'Invalid email or password.');
+      } finally {
+        subBtn.disabled = false;
+        subBtn.textContent = 'Sign In';
+      }
+    } else if (t === 'welcome-register') {
+      var name = f.name.value.trim();
+      var regEmail = f.email.value.trim();
+      var regPw = f.password.value;
+      var roleEl = f.querySelector('input[name="welcomeRole"]:checked');
+      var r = roleEl ? roleEl.value : 'attendee';
+
+      if (!name || name.length < 2) { showWelcomeErr(errEl, 'Please enter your full name (min 2 chars).'); return; }
+      if (!regEmail) { showWelcomeErr(errEl, 'Please enter your email.'); return; }
+      if (!regPw || regPw.length < 8) { showWelcomeErr(errEl, 'Password must be at least 8 characters.'); return; }
+
+      subBtn.disabled = true;
+      subBtn.textContent = 'Creating account…';
+      errEl.hidden = true;
+
+      try {
+        await registerUser(name, regEmail, regPw, r);
+        modal.classList.add('hidden');
+      } catch (err) {
+        showWelcomeErr(errEl, err.message || 'Registration failed.');
+      } finally {
+        subBtn.disabled = false;
+        subBtn.textContent = 'Create Account';
+      }
     }
   });
 
-  // ── Click handlers (demo personas + register link)
+  // Click handlers (demo personas)
   modal.addEventListener('click', async function(e) {
     var btn = e.target.closest('[data-act]');
     if (!btn) return;
     var act = btn.dataset.act;
-
-    // "Create Account" → navigate to full register/login page & close modal
-    if (act === 'welcome-register') {
-      modal.classList.add('hidden');
-      setRoute('#login');
-      return;
-    }
 
     // Demo persona buttons
     if (act === 'welcome-demo') {
@@ -2851,7 +3017,8 @@ function initWelcomeModal() {
       if (!d) return;
 
       btn.classList.add('loading');
-      btn.querySelector('.demo-label').textContent = '…';
+      var labelEl = btn.querySelector('.demo-label');
+      if (labelEl) labelEl.textContent = '…';
 
       try {
         var res = await api('POST', '/demo-login', { role: dRole });
@@ -2864,8 +3031,9 @@ function initWelcomeModal() {
         redirectAfterAuth(res.user.role);
       } catch (err) {
         toast('Demo login failed: ' + err.message, 'err');
+      } finally {
         btn.classList.remove('loading');
-        btn.querySelector('.demo-label').textContent = d.role.charAt(0).toUpperCase() + d.role.slice(1);
+        if (labelEl) labelEl.textContent = d.role.charAt(0).toUpperCase() + d.role.slice(1);
       }
     }
   });
@@ -2884,5 +3052,6 @@ window.addEventListener('popstate', route);
 window.addEventListener('storage', () => { initSession(); route(); });
 route();
 initWelcomeModal();
+verifyTokenOnStartup();
 
 })();

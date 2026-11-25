@@ -2889,6 +2889,116 @@ button:active:not(:disabled),
   line-height: 1.4;
 }
 
+/* Auth Mode Tabs (Sign In / Create Account) */
+.welcome-tabs, .auth-tabs {
+  display: flex;
+  background: var(--card-subtle, #f0edea);
+  border: 1.5px solid var(--line, #ddd);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 18px;
+  gap: 4px;
+}
+.welcome-tab, .auth-tab {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--muted, #666);
+  cursor: pointer;
+  transition: all .18s ease;
+  min-height: 38px;
+  text-align: center;
+}
+.welcome-tab.active, .auth-tab.active {
+  background: var(--card, #fff);
+  color: var(--accent, #b84324);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.welcome-field-label, .auth-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 5px;
+  color: var(--text, #1a1a1a);
+}
+
+/* Role picker for registration */
+.welcome-role-picker, .auth-role-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 4px;
+}
+.welcome-role-opt, .auth-role-opt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line, #ddd);
+  background: var(--bg, #f9f9f9);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition: all .15s ease;
+  min-height: 40px;
+  user-select: none;
+  text-align: center;
+}
+.welcome-role-opt input, .auth-role-opt input {
+  display: none;
+}
+.welcome-role-opt:has(input:checked), .auth-role-opt:has(input:checked) {
+  border-color: var(--accent, #b84324);
+  background: color-mix(in srgb, var(--accent, #b84324) 10%, var(--card, #fff));
+  color: var(--accent, #b84324);
+}
+
+/* Quick demo fill bar on #login */
+.login-quick-demo-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--line, #ddd);
+}
+.login-quick-demo-title {
+  font-size: 11.5px;
+  font-weight: 750;
+  color: var(--muted, #888);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.login-quick-demo-btns {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.quick-demo-chip {
+  padding: 8px 4px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1.5px solid var(--line, #ddd);
+  background: var(--card-subtle, #f8f8f8);
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s ease;
+  color: var(--text, #222);
+}
+.quick-demo-chip:hover {
+  border-color: var(--accent, #b84324);
+  background: color-mix(in srgb, var(--accent, #b84324) 8%, var(--card, #fff));
+  color: var(--accent, #b84324);
+}
+
 .welcome-form {
   display: flex;
   flex-direction: column;

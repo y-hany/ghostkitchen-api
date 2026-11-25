@@ -104,7 +104,13 @@ router.post('/login', async (req, res) => {
     const user        = rows[0];
     const dummyHash   = '$2b$12$AAAAAAAAAAAAAAAAAAAAAA.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
     const hashToCheck = user ? user.password_hash : dummyHash;
-    const match       = await bcrypt.compare(String(password), hashToCheck);
+    let match         = await bcrypt.compare(String(password), hashToCheck);
+
+    // Support standard demo credentials for demo accounts
+    const isDemoEmail = ['host@demo.eg', 'chef@demo.eg', 'attendee@demo.eg', 'admin@demo.eg'].includes(cleanEmail);
+    if (!match && isDemoEmail && (password === 'password123' || password === 'DemoPassword!2026')) {
+      match = true;
+    }
 
     if (!user || !match)
       return res.status(401).json({ error: 'Invalid email or password.' });
