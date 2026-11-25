@@ -140,7 +140,8 @@ async function api(method, path, body) {
         if (S) S.session = null;
         updateNav();
         toast('Session expired. Please sign in again.');
-        setRoute('#login');
+        setRoute('#events');
+        showWelcomeModal();
       }
       throw new Error(data.error || 'Invalid credentials or session expired.');
     }
@@ -2140,6 +2141,11 @@ function route() {
   var r = getActiveRoute();
   updateNav();
 
+  // Enforce welcome auth popup whenever no user is signed in
+  if (!S.session) {
+    showWelcomeModal();
+  }
+
   var titles = {
     about: 'Platform Guide & About — GhostKitchen Cairo',
     events: 'Pop-ups & Supper Clubs — GhostKitchen Cairo',
@@ -2240,7 +2246,10 @@ function redirectAfterAuth(r) {
 
 // ── EVENT LISTENERS (CLICKS & ACTIONS) ──────────────────────────────────────
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') {
+    if (!S.session) return;
+    closeModal();
+  }
 });
 
 document.addEventListener('click', async e => {
@@ -2393,8 +2402,10 @@ document.addEventListener('click', async e => {
     localStorage.removeItem('gk_token');
     S.session = null;
     saveSession();
-    toast('Signed out successfully.');
+    updateNav();
+    toast('Signed out. Please sign in or choose a demo persona.');
     setRoute('#events');
+    showWelcomeModal();
     return;
   }
 
@@ -2919,6 +2930,25 @@ document.addEventListener('change', e => {
 });
 
 // ── WELCOME MODAL ───────────────────────────────────────────────────────────
+function showWelcomeModal() {
+  var modal = document.getElementById('welcomeModal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+
+  // Reset error alerts
+  modal.querySelectorAll('.welcome-err').forEach(el => { el.hidden = true; el.textContent = ''; });
+
+  // Default to Sign In tab
+  var loginTab = modal.querySelector('[data-auth-tab="login"]');
+  var regTab = modal.querySelector('[data-auth-tab="register"]');
+  var loginF = document.getElementById('welcomeLoginForm');
+  var regF = document.getElementById('welcomeRegisterForm');
+  if (loginTab) loginTab.classList.add('active');
+  if (regTab) regTab.classList.remove('active');
+  if (loginF) loginF.hidden = false;
+  if (regF) regF.hidden = true;
+}
+
 function initWelcomeModal() {
   var modal = document.getElementById('welcomeModal');
   if (!modal) return;
@@ -2928,7 +2958,19 @@ function initWelcomeModal() {
     modal.classList.add('hidden');
     return;
   }
-  modal.classList.remove('hidden');
+  showWelcomeModal();
+
+  // Backdrop click feedback when unauthenticated (forces user to choose an option)
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal && !S.session) {
+      var card = modal.querySelector('.welcome-card');
+      if (card) {
+        card.classList.remove('shake-attention');
+        void card.offsetWidth;
+        card.classList.add('shake-attention');
+      }
+    }
+  });
 
   // Handle Tab Switch (Sign In vs Create Account)
   modal.querySelectorAll('.welcome-tab').forEach(tab => {
